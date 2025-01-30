@@ -55,7 +55,19 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (command === "help") {
-            addToHistory(command, "Comandos disponíveis:\n- help: Exibe esta mensagem\n- clear: Limpa o terminal\n- cd [dir]: Muda de diretório\n- dir: Lista arquivos\n- pwd: Mostra diretório atual\n- echo [texto]: Exibe texto");
+            addToHistory(command,   "Comandos disponíveis:\n" +
+                "- help: Exibe esta mensagem\n" +
+                "- clear: Limpa o terminal\n" +
+                "- cd [dir]: Muda de diretório\n" +
+                "- dir: Lista arquivos\n" +
+                "- pwd: Mostra diretório atual\n" +
+                "- echo [texto]: Exibe texto\n" +
+                "- mkdir [dir]: Cria uma nova pasta\n" +
+                "- del [arquivo]: Deleta um arquivo (Windows)\n" +
+                "- ren [arquivo_atual] [novo_nome]: Renomeia um arquivo\n" +
+                "- ping [host]: Testa a conexão com um site/IP"
+
+        );
             return;
         }
 

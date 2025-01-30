@@ -6,7 +6,7 @@ import java.nio.file.Paths;
 @Service
 public class TerminalService {
 
-    
+   
     private File currentDirectory = new File(System.getProperty("user.dir")); // Diretório inicial do terminal
 
     public String executeCommand(String command) {
@@ -14,6 +14,25 @@ public class TerminalService {
         try {
             String os = System.getProperty("os.name").toLowerCase();
             boolean isWindows = os.contains("win");
+
+            // Comando 'help' (lista comandos disponíveis)
+            if (command.equals("help")) {
+                return """
+                        Comandos disponíveis:
+                        - help          -> Exibe esta mensagem
+                        - clear         -> Limpa o terminal
+                        - cd <dir>      -> Muda de diretório
+                        - cd ..         -> Volta um diretório
+                        - pwd           -> Mostra o diretório atual
+                        - ls            -> Lista arquivos e diretórios
+                        - mkdir <dir>   -> Cria um novo diretório
+                        - rm <arquivo>  -> Remove um arquivo (Linux/macOS)
+                        - del <arquivo> -> Remove um arquivo (Windows)
+                        - ren <atual> <novo> -> Renomeia um arquivo
+                        - echo <texto>  -> Exibe texto no terminal
+                        - ping <host>   -> Testa conexão com um site/IP
+                        """;
+            }
 
             // Comando 'cd' (mudar diretório)
             if (command.startsWith("cd ")) {
@@ -75,6 +94,19 @@ public class TerminalService {
 
                 boolean created = newDir.mkdir();
                 return created ? "Diretório criado: " + newDir.getAbsolutePath() : "Erro ao criar diretório.";
+            }
+
+            // Comando 'rm' e 'del' (remover arquivo)
+            if (command.startsWith("rm ") || command.startsWith("del ")) {
+                String fileName = command.substring(command.indexOf(" ") + 1).trim();
+                File fileToDelete = new File(currentDirectory, fileName);
+
+                if (!fileToDelete.exists()) {
+                    return "Erro: O arquivo '" + fileName + "' não existe.";
+                }
+
+                boolean deleted = fileToDelete.delete();
+                return deleted ? "Arquivo deletado: " + fileToDelete.getAbsolutePath() : "Erro ao deletar o arquivo.";
             }
 
             // Comando 'ping' (testar conexão)
