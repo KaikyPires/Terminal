@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const terminalHistory = document.querySelector(".history");
     const apiUrl = "http://localhost:8080/api/terminal/execute";
 
+
     let commandHistory = [];
     let historyIndex = -1;
 
@@ -87,7 +88,6 @@ document.addEventListener("DOMContentLoaded", function () {
             `);
             return;
         }
-        
 
         try {
             const response = await fetch(apiUrl, {
@@ -99,7 +99,8 @@ document.addEventListener("DOMContentLoaded", function () {
             const output = await response.text();
             addToHistory(command, output);
         } catch (error) {
-            addToHistory(command, "Erro ao conectar com o servidor.");
+            console.error("Erro ao processar comando:", error);
+            addToHistory(command, "Erro ao conectar com o servidor: " + error.message);
         }
     }
 
@@ -128,10 +129,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         terminalHistory.appendChild(commandContainer);
 
-        // 🔥 Scroll automático para o final do terminal
-        setTimeout(() => {
-            terminalContainer.scrollTop = terminalContainer.scrollHeight;
-        }, 50);
+        // 🔥 Scroll automático para o último comando
+        commandContainer.scrollIntoView({ behavior: "smooth" });
     }
 
     focusInput();
