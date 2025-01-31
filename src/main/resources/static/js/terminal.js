@@ -55,21 +55,39 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         if (command === "help") {
-            addToHistory(command,   "Comandos disponíveis:\n" +
-                "- help: Exibe esta mensagem\n" +
-                "- clear: Limpa o terminal\n" +
-                "- cd [dir]: Muda de diretório\n" +
-                "- dir: Lista arquivos\n" +
-                "- pwd: Mostra diretório atual\n" +
-                "- echo [texto]: Exibe texto\n" +
-                "- mkdir [dir]: Cria uma nova pasta\n" +
-                "- del [arquivo]: Deleta um arquivo (Windows)\n" +
-                "- ren [arquivo_atual] [novo_nome]: Renomeia um arquivo\n" +
-                "- ping [host]: Testa a conexão com um site/IP"
-
-        );
+            addToHistory(command, `Comandos disponíveis:\n
+                - help: Exibe esta mensagem
+                - clear: Limpa o terminal
+                - cd [dir]: Muda de diretório
+                - cd ..: Volta para o diretório anterior
+                - dir / ls: Lista arquivos e diretórios
+                - pwd: Mostra diretório atual
+                - echo [texto]: Exibe texto no terminal
+                - mkdir [dir]: Cria uma nova pasta
+                - del [arquivo]: Deleta um arquivo (Windows)
+                - rm [arquivo]: Deleta um arquivo (Linux)
+                - ren [arquivo_atual] [novo_nome]: Renomeia um arquivo
+                - touch [arquivo]: Cria um arquivo vazio
+                - cat [arquivo]: Exibe o conteúdo de um arquivo
+                - rmdir [diretorio]: Remove um diretório vazio
+                - tree: Exibe a estrutura de diretórios
+                - ping [host]: Testa a conexão com um site/IP
+                - find [diretorio] [nome]: Busca arquivos pelo nome
+                - chmod [permissão] [arquivo]: Simula alteração de permissões
+                - ls -l: Lista arquivos com detalhes (permissões, tamanho)
+                - cp [origem] [destino]: Copia um arquivo ou diretório
+                - mv [origem] [destino]: Move um arquivo ou diretório
+                - diff [arquivo1] [arquivo2]: Compara dois arquivos e exibe diferenças
+                - zip [arquivo.zip] [itens]: Simula compactação de arquivos
+                - unzip [arquivo.zip]: Simula descompactação de arquivos
+                - stat [arquivo]: Exibe informações detalhadas de um arquivo ou diretório
+                - du [diretorio]: Exibe o tamanho total de um diretório
+                - history: Exibe os últimos comandos digitados
+                - exit: Sai do terminal
+            `);
             return;
         }
+        
 
         try {
             const response = await fetch(apiUrl, {

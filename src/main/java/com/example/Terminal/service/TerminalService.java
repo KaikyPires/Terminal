@@ -1,50 +1,38 @@
 package com.example.Terminal.service;
-import org.springframework.stereotype.Service;
 
+import org.springframework.stereotype.Service;
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.*;
+
 @Service
 public class TerminalService {
 
-   
-    private File currentDirectory = new File(System.getProperty("user.dir")); // Diretório inicial do terminal
+    private File currentDirectory = new File(System.getProperty("user.dir")); // Diretório inicial
+    private final Map<String, String> permissoes = new HashMap<>(); // Simulação de permissões
+    private final List<String> historicoComandos = new ArrayList<>(); // Histórico de comandos
 
     public String executeCommand(String command) {
+        historicoComandos.add(command); // Salvar no histórico
         StringBuilder output = new StringBuilder();
         try {
             String os = System.getProperty("os.name").toLowerCase();
             boolean isWindows = os.contains("win");
 
-            // Comando 'help' (lista comandos disponíveis)
-            if (command.equals("help")) {
-                return """
-                        Comandos disponíveis:
-                        - help          -> Exibe esta mensagem
-                        - clear         -> Limpa o terminal
-                        - cd <dir>      -> Muda de diretório
-                        - cd ..         -> Volta um diretório
-                        - pwd           -> Mostra o diretório atual
-                        - ls            -> Lista arquivos e diretórios
-                        - mkdir <dir>   -> Cria um novo diretório
-                        - rm <arquivo>  -> Remove um arquivo (Linux/macOS)
-                        - del <arquivo> -> Remove um arquivo (Windows)
-                        - ren <atual> <novo> -> Renomeia um arquivo
-                        - echo <texto>  -> Exibe texto no terminal
-                        - ping <host>   -> Testa conexão com um site/IP
-                        """;
-            }
-
-            // Comando 'cd' (mudar diretório)
+            // ✅ Comando 'cd' (mudar diretório e exibir onde está)
             if (command.startsWith("cd ")) {
                 String newPath = command.substring(3).trim();
-                
-                // Corrigir 'cd..' (sem espaço)
-                if (newPath.equals("..") || newPath.equals("..\\")) {
-                    currentDirectory = currentDirectory.getParentFile();
-                    return "Diretório alterado para: " + (currentDirectory != null ? currentDirectory.getAbsolutePath() : "C:\\");
-                }
-
                 File newDirectory = new File(currentDirectory, newPath);
+
+                if (newPath.equals("..")) {
+                    if (currentDirectory.getParentFile() != null) {
+                        currentDirectory = currentDirectory.getParentFile();
+                        return "Diretório alterado para: " + currentDirectory.getAbsolutePath();
+                    } else {
+                        return "Erro: Você já está na raiz do sistema.";
+                    }
+                }
 
                 if (newDirectory.exists() && newDirectory.isDirectory()) {
                     currentDirectory = newDirectory;
@@ -54,112 +42,139 @@ public class TerminalService {
                 }
             }
 
-            // Comando 'pwd' (mostrar diretório atual)
+            // ✅ Comando 'pwd' (Mostrar diretório atual)
             if (command.equals("pwd")) {
-                return currentDirectory.getAbsolutePath();
+                return "Diretório atual: " + currentDirectory.getAbsolutePath();
             }
 
-            // Comando 'echo' (exibir texto)
-            if (command.startsWith("echo ")) {
-                return command.substring(5);
+            // ✅ Comando 'ls -l' (Listar permissões de arquivos e diretórios)
+            if (command.equals("ls -l")) {
+                return listarArquivosDetalhado();
             }
 
-            // Comando 'ls' no Windows → Convertido para 'dir'
-            if (isWindows && command.equals("ls")) {
-                command = "dir";
+            // ✅ Comando 'chmod' (Simulação de permissões)
+            if (command.startsWith("chmod ")) {
+                return simularChmod(command.substring(6).trim());
             }
 
-            // Comando 'ls' para listar arquivos corretamente no Windows/Linux
-            if (command.equals("ls") || command.equals("dir")) {
-                File[] files = currentDirectory.listFiles();
-                if (files != null) {
-                    for (File file : files) {
-                        output.append(file.isDirectory() ? "[DIR] " : "[FILE] ");
-                        output.append(file.getName()).append("\n");
-                    }
-                } else {
-                    output.append("Erro ao listar arquivos.");
-                }
-                return output.toString();
+            // ✅ Comando 'history' (Exibir comandos usados)
+            if (command.equals("history")) {
+                return String.join("\n", historicoComandos);
             }
 
-            // Comando 'mkdir' (criar diretório)
-            if (command.startsWith("mkdir ")) {
-                String dirName = command.substring(6).trim();
-                File newDir = new File(currentDirectory, dirName);
-
-                if (newDir.exists()) {
-                    return "Erro: O diretório já existe!";
-                }
-
-                boolean created = newDir.mkdir();
-                return created ? "Diretório criado: " + newDir.getAbsolutePath() : "Erro ao criar diretório.";
+            // ✅ Comando 'find' (Buscar arquivos por nome)
+            if (command.startsWith("find ")) {
+                return buscarArquivos(command.substring(5).trim());
             }
 
-            // Comando 'rm' e 'del' (remover arquivo)
-            if (command.startsWith("rm ") || command.startsWith("del ")) {
-                String fileName = command.substring(command.indexOf(" ") + 1).trim();
-                File fileToDelete = new File(currentDirectory, fileName);
-
-                if (!fileToDelete.exists()) {
-                    return "Erro: O arquivo '" + fileName + "' não existe.";
-                }
-
-                boolean deleted = fileToDelete.delete();
-                return deleted ? "Arquivo deletado: " + fileToDelete.getAbsolutePath() : "Erro ao deletar o arquivo.";
+            // ✅ Comando 'diff' (Comparar arquivos)
+            if (command.startsWith("diff ")) {
+                return compararArquivos(command.substring(5).trim());
             }
 
-            // Comando 'ping' (testar conexão)
-            if (command.startsWith("ping ")) {
-                command = isWindows ? "ping " + command.substring(5) : "ping -c 4 " + command.substring(5);
+            // ✅ Comando 'cp' (Copiar arquivos)
+            if (command.startsWith("cp ")) {
+                return copiarArquivo(command.substring(3).trim());
             }
 
-            // Comando 'ren' (renomear arquivo)
-            if (command.startsWith("ren ") || command.startsWith("rename ")) {
-                String[] parts = command.split("\\s+");
-                if (parts.length < 3) {
-                    return "Uso correto: ren <arquivo_atual> <novo_nome>";
-                }
-
-                File oldFile = new File(currentDirectory, parts[1]);
-                File newFile = new File(currentDirectory, parts[2]);
-
-                if (!oldFile.exists()) {
-                    return "Erro: O arquivo '" + parts[1] + "' não existe.";
-                }
-
-                boolean renamed = oldFile.renameTo(newFile);
-                return renamed ? "Arquivo renomeado para: " + newFile.getName() : "Erro ao renomear o arquivo.";
+            // ✅ Comando 'mv' (Mover arquivos)
+            if (command.startsWith("mv ")) {
+                return moverArquivo(command.substring(3).trim());
             }
 
-            // Configuração do processo para Windows/Linux
-            String[] cmdArray;
-            if (isWindows) {
-                cmdArray = new String[]{"cmd.exe", "/c", command};
-            } else {
-                cmdArray = new String[]{"/bin/bash", "-c", command};
+            // ✅ Comando 'zip' (Simular compactação)
+            if (command.startsWith("zip ")) {
+                return compactarArquivos(command.substring(4).trim());
             }
 
-            ProcessBuilder processBuilder = new ProcessBuilder(cmdArray);
-            processBuilder.directory(currentDirectory); // Mantém o diretório da sessão
-            processBuilder.redirectErrorStream(true);
-
-            Process process = processBuilder.start();
-
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
+            // ✅ Comando 'unzip' (Simular descompactação)
+            if (command.startsWith("unzip ")) {
+                return descompactarArquivo(command.substring(6).trim());
             }
 
-            int exitCode = process.waitFor();
-            output.append("\nExit Code: ").append(exitCode);
+            // ✅ Executar comandos reais do sistema operacional
+            return executarComandoReal(command);
 
         } catch (Exception e) {
-            output.append("Erro ao executar comando: ").append(e.getMessage());
+            return "Erro ao executar comando: " + e.getMessage();
+        }
+    }
+
+    // ✅ Simulação do comando 'chmod'
+    private String simularChmod(String parametros) {
+        String[] parts = parametros.split("\\s+");
+        if (parts.length < 2) return "Uso correto: chmod <permissao> <arquivo>";
+
+        String permissao = parts[0];
+        String nomeArquivo = parts[1];
+        File file = new File(currentDirectory, nomeArquivo);
+
+        if (!file.exists()) return "chmod: cannot access '" + nomeArquivo + "': No such file or directory\n\nExit Code: 1";
+
+        permissoes.put(file.getAbsolutePath(), permissao);
+        return "Permissões de " + nomeArquivo + " alteradas para " + permissao;
+    }
+
+    // ✅ Método para listar arquivos detalhados (permissões simuladas)
+    private String listarArquivosDetalhado() {
+        File[] files = currentDirectory.listFiles();
+        if (files == null) return "Erro ao listar arquivos.";
+
+        StringBuilder lista = new StringBuilder();
+        lista.append("user@terminal:$ ls -l\n");
+
+        for (File file : files) {
+            String permissao = permissoes.getOrDefault(file.getAbsolutePath(), "rw-r--r--");
+            lista.append(permissao).append(" ").append(file.isDirectory() ? "[DIR] " : "[FILE] ").append(file.getName()).append("\n");
         }
 
+        return lista.toString();
+    }
+
+    // ✅ Métodos de Arquivos
+    private String buscarArquivos(String nome) {
+        return "Simulação: Arquivos encontrados com nome " + nome;
+    }
+
+    private String compararArquivos(String arquivos) {
+        return "Simulação: Comparação entre " + arquivos;
+    }
+
+    private String copiarArquivo(String parametros) {
+        return "Simulação: Arquivo copiado para " + parametros;
+    }
+
+    private String moverArquivo(String parametros) {
+        return "Simulação: Arquivo movido para " + parametros;
+    }
+
+    private String compactarArquivos(String parametros) {
+        return "Simulação: Arquivos compactados em " + parametros;
+    }
+
+    private String descompactarArquivo(String parametros) {
+        return "Simulação: Arquivo descompactado " + parametros;
+    }
+
+    // ✅ Método para executar comandos reais do sistema operacional
+    private String executarComandoReal(String command) throws IOException, InterruptedException {
+        String os = System.getProperty("os.name").toLowerCase();
+        boolean isWindows = os.contains("win");
+        String[] cmdArray = isWindows ? new String[]{"cmd.exe", "/c", command} : new String[]{"/bin/bash", "-c", command};
+
+        ProcessBuilder processBuilder = new ProcessBuilder(cmdArray);
+        processBuilder.directory(currentDirectory);
+        processBuilder.redirectErrorStream(true);
+
+        Process process = processBuilder.start();
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+
+        StringBuilder output = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) output.append(line).append("\n");
+
+        int exitCode = process.waitFor();
+        output.append("\nExit Code: ").append(exitCode);
         return output.toString();
     }
 }
