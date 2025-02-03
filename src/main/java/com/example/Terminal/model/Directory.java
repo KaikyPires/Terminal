@@ -50,8 +50,20 @@ public class Directory {
     }
 
     public Optional<File> findFile(String name) {
-        return files.stream().filter(file -> file.getName().equals(name)).findFirst();
+        System.out.println("DEBUG: Buscando arquivo '" + name + "' no diretório '" + this.getName() + "'");
+        
+        for (File file : files) {
+            System.out.println("DEBUG: Comparando com '" + file.getName() + "'");
+            if (file.getName().trim().equals(name.trim())) {
+                System.out.println("DEBUG: Arquivo encontrado -> " + file.getName());
+                return Optional.of(file);
+            }
+        }
+        
+        System.out.println("DEBUG: Arquivo '" + name + "' NÃO encontrado no diretório '" + this.getName() + "'");
+        return Optional.empty();
     }
+    
     
     
     public void addFile(File file) {

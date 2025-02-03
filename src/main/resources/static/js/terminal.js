@@ -57,34 +57,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
         if (command === "help") {
             addToHistory(command, `Comandos disponíveis:\n
-                - help: Exibe esta mensagem
-                - clear: Limpa o terminal
-                - cd [dir]: Muda de diretório
-                - cd ..: Volta para o diretório anterior
-                - dir / ls: Lista arquivos e diretórios
-                - pwd: Mostra diretório atual
-                - echo [texto]: Exibe texto no terminal
-                - mkdir [dir]: Cria uma nova pasta
-                - del [arquivo]: Deleta um arquivo (Windows)
-                - rm [arquivo]: Deleta um arquivo (Linux)
-                - ren [arquivo_atual] [novo_nome]: Renomeia um arquivo
-                - touch [arquivo]: Cria um arquivo vazio
-                - cat [arquivo]: Exibe o conteúdo de um arquivo
-                - rmdir [diretorio]: Remove um diretório vazio
-                - tree: Exibe a estrutura de diretórios
-                - ping [host]: Testa a conexão com um site/IP
-                - find [diretorio] [nome]: Busca arquivos pelo nome
-                - chmod [permissão] [arquivo]: Simula alteração de permissões
-                - ls -l: Lista arquivos com detalhes (permissões, tamanho)
-                - cp [origem] [destino]: Copia um arquivo ou diretório
-                - mv [origem] [destino]: Move um arquivo ou diretório
-                - diff [arquivo1] [arquivo2]: Compara dois arquivos e exibe diferenças
-                - zip [arquivo.zip] [itens]: Simula compactação de arquivos
-                - unzip [arquivo.zip]: Simula descompactação de arquivos
-                - stat [arquivo]: Exibe informações detalhadas de um arquivo ou diretório
-                - du [diretorio]: Exibe o tamanho total de um diretório
-                - history: Exibe os últimos comandos digitados
-                - exit: Sai do terminal
+                - pwd: Exibe o caminho atual do diretório\n
+                - mkdir [dir]: Cria um novo diretório\n
+                - rmdir [dir]: Remove um diretório vazio\n
+                - tree: Exibe a estrutura hierárquica de diretórios\n
+                - rename [nome_atual] [novo_nome]: Renomeia um arquivo ou diretório\n
+                - touch [arquivo]: Cria um arquivo vazio\n
+                - echo [texto] > [arquivo]: Escreve texto em um arquivo\n
+                - cat [arquivo]: Exibe o conteúdo de um arquivo\n
+                - rm [arquivo]: Remove um arquivo ou diretório\n
+                - ls: Lista arquivos e diretórios\n
+                - cd [dir]: Muda para o diretório especificado\n
+                - find [dir] -name [nome]: Busca arquivos por nome\n
+                - grep [termo] [arquivo]: Procura por um termo dentro de um arquivo\n
+                - chmod [permissão] [arquivo]: Modifica permissões de um arquivo (simulado)\n
+                - chown [dono] [arquivo]: Modifica o dono de um arquivo (simulado)\n
+                - stat [arquivo]: Exibe informações detalhadas sobre um arquivo\n
+                - du [diretório]: Exibe o tamanho total de um diretório\n
+                - cp [origem] [destino]: Copia arquivos ou diretórios\n
+                - mv [origem] [destino]: Move arquivos ou diretórios\n
+                - diff [arquivo1] [arquivo2]: Compara dois arquivos e exibe as diferenças\n
+                - zip [arquivo.zip] [itens]: Simula a compactação de arquivos\n
+                - unzip [arquivo.zip]: Simula a extração de um arquivo ZIP\n
+                - history: Exibe o histórico de comandos digitados\n
             `);
             return;
         }

@@ -20,61 +20,74 @@ public class TerminalService {
 
     public String executeCommand(String command) {
         commandHistory.add(command);
-
+    
         if (command.startsWith("echo ")) {
             return echo(command.substring(5));
         }
-
+    
         String[] parts = command.split(" ", 3);
-        switch (parts[0]) {
+        String cmd = parts[0];
+        String arg1 = (parts.length > 1) ? parts[1] : "";
+        String arg2 = (parts.length > 2) ? parts[2] : "";
+    
+        switch (cmd) {
             case "pwd":
                 return getCurrentPath();
             case "mkdir":
-                return parts.length > 1 ? mkdir(parts[1]) : "mkdir: missing operand";
+                return !arg1.isEmpty() ? mkdir(arg1) : "mkdir: missing operand";
             case "rmdir":
-                return parts.length > 1 ? rmdir(parts[1]) : "rmdir: missing operand";
+                return !arg1.isEmpty() ? rmdir(arg1) : "rmdir: missing operand";
             case "tree":
                 return printTree(currentDirectory, 0);
             case "rename":
-                return parts.length > 2 ? rename(parts[1], parts[2]) : "rename: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? rename(arg1, arg2) : "rename: missing operands";
             case "touch":
-                return parts.length > 1 ? touch(parts[1]) : "touch: missing operand";
+                return !arg1.isEmpty() ? touch(arg1) : "touch: missing operand";
             case "cat":
-                return parts.length > 1 ? cat(parts[1]) : "cat: missing operand";
+                return !arg1.isEmpty() ? cat(arg1) : "cat: missing operand";
             case "rm":
-                return parts.length > 1 ? rm(parts[1]) : "rm: missing operand";
+                return !arg1.isEmpty() ? rm(arg1) : "rm: missing operand";
             case "ls":
-                return ls(parts.length > 1 && parts[1].equals("-l"));
+                return ls(arg1.equals("-l"));
             case "cd":
-                return parts.length > 1 ? cd(parts[1]) : "cd: missing operand";
+                return !arg1.isEmpty() ? cd(arg1) : "cd: missing operand";
             case "find":
-                return parts.length > 2 && parts[1].equals("-name") ? find(parts[2]) : "find: invalid syntax";
+                return (parts.length > 2 && parts[1].equals("-name")) ? find(parts[2]) : "find: invalid syntax";
             case "grep":
-                return parts.length > 2 ? grep(parts[1], parts[2]) : "grep: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? grep(arg1, arg2) : "grep: missing operands";
             case "chmod":
-                return parts.length > 2 ? chmod(parts[1], parts[2]) : "chmod: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? chmod(arg1, arg2) : "chmod: missing operands";
             case "chown":
-                return parts.length > 2 ? chown(parts[1], parts[2]) : "chown: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? chown(arg1, arg2) : "chown: missing operands";
             case "stat":
-                return parts.length > 1 ? stat(parts[1]) : "stat: missing operand";
+                return !arg1.isEmpty() ? stat(arg1) : "stat: missing operand";
             case "du":
-                return parts.length > 1 ? du(parts[1]) : "du: missing operand";
+                return !arg1.isEmpty() ? du(arg1) : "du: missing operand";
             case "cp":
-                return parts.length > 2 ? cp(parts[1], parts[2]) : "cp: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? cp(arg1, arg2) : "cp: missing operands";
             case "mv":
-                return parts.length > 2 ? mv(parts[1], parts[2]) : "mv: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? mv(arg1, arg2) : "mv: missing operands";
             case "diff":
-                return parts.length > 2 ? diff(parts[1], parts[2]) : "diff: missing operands";
-            case "zip":
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? diff(arg1, arg2) : "diff: missing operands";
+                case "zip":
                 return parts.length > 1 ? zip(parts) : "zip: missing operand";
+            
             case "unzip":
-                return parts.length > 1 ? unzip(parts[1]) : "unzip: missing operand";
+                return !arg1.isEmpty() ? unzip(arg1) : "unzip: missing operand";
             case "history":
                 return history();
+            case "tail":
+                        return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2)) : "tail: missing operands";
+           case "wc":
+                        return !arg1.isEmpty() ? wc(arg1) : "wc: missing operand";
+            case "head":
+                        return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2)) : "head: missing operands";
             default:
-                return "zsh: command not found: " + command; // Retorna erro se o comando não for encontrado
+                return "zsh: command not found: " + command;
         }
     }
+    
+    
 
     // ✅ Método pwd: Retorna o caminho atual
     private String getCurrentPath() {
@@ -122,7 +135,7 @@ public class TerminalService {
         if (command.contains(">>")) {
             String[] parts = command.split(">>", 2);
             if (parts.length < 2) return "echo: syntax error";
-            String content = parts[0].trim();
+            String content = parts[0].trim().replaceAll("\"", "");  // Remove aspas extras
             String fileName = parts[1].trim();
     
             Optional<File> file = currentDirectory.findFile(fileName);
@@ -133,11 +146,13 @@ public class TerminalService {
                 newFile.setContent(content);
                 currentDirectory.addFile(newFile);
             }
+    
+            System.out.println("DEBUG: Arquivo '" + fileName + "' atualizado com conteúdo: " + content);
             return "";
         } else if (command.contains(">")) {
             String[] parts = command.split(">", 2);
             if (parts.length < 2) return "echo: syntax error";
-            String content = parts[0].trim();
+            String content = parts[0].trim().replaceAll("\"", "");  // Remove aspas extras
             String fileName = parts[1].trim();
     
             Optional<File> file = currentDirectory.findFile(fileName);
@@ -148,13 +163,14 @@ public class TerminalService {
                 newFile.setContent(content);
                 currentDirectory.addFile(newFile);
             }
+    
+            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content);
             return "";
         } else {
-            return command;
+            return command.replaceAll("\"", ""); // Remove aspas antes de exibir
         }
     }
     
-
     // ✅ cat: Mostrar conteúdo de arquivos
     private String cat(String fileName) {
         System.out.println("DEBUG: Current Directory -> " + currentDirectory.getName());
@@ -212,7 +228,8 @@ public class TerminalService {
     // ✅ find: Procurar arquivos e diretórios
     private String find(String name) {
         name = name.replaceAll("^\"|\"$", ""); // Remove aspas externas
-        return searchRecursively(currentDirectory, name);
+        String result = searchRecursively(currentDirectory, name);
+        return result.isEmpty() ? "find: no matches found for '" + name + "'" : result;
     }
     
     private String searchRecursively(Directory dir, String name) {
@@ -236,16 +253,22 @@ public class TerminalService {
     // ✅ grep: Procurar texto em arquivos
     private String grep(String term, String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
-        if (file.isPresent()) {
-            String content = file.get().getContent();
-            if (content.contains(term)) {
-                return content.lines().filter(line -> line.contains(term)).collect(Collectors.joining("\n"));
-            } else {
-                return "grep: no matches found for '" + term + "'";
-            }
+        
+        if (file.isEmpty()) {
+            return "grep: " + fileName + ": No such file or directory";
         }
-        return "grep: " + fileName + ": No such file or directory";
+    
+        final String finalTerm = term.replaceAll("^\"|\"$", ""); // Remove aspas externas
+    
+        List<String> matchingLines = Arrays.stream(file.get().getContent().split("\n"))
+                                           .filter(line -> line.contains(finalTerm))
+                                           .collect(Collectors.toList());
+    
+        return matchingLines.isEmpty() ? "grep: no matches found for '" + finalTerm + "'" 
+                                       : String.join("\n", matchingLines);
     }
+    
+    
 
     // ✅ chmod: Alterar permissões simuladas
     private String chmod(String permission, String name) {
@@ -313,23 +336,39 @@ public class TerminalService {
         return "rename: no such file or directory: " + oldName;
     }
 
-    // ✅ head: Exibir primeiras `n` linhas de um arquivo
     private String head(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
-        return file.map(f -> Arrays.stream(f.getContent().split("\n")).limit(n).collect(Collectors.joining("\n")))
-                .orElse("head: " + fileName + ": No such file or directory");
+        
+        if (file.isEmpty()) {
+            return "head: " + fileName + ": No such file or directory";
+        }
+    
+        List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
+        int endIndex = Math.min(n, lines.size());  // Pegando as primeiras N linhas
+    
+        // Remover aspas extras nas linhas antes de retornar
+        return lines.subList(0, endIndex).stream()
+                    .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
+                    .collect(Collectors.joining("\n"));
     }
-
-    // ✅ tail: Exibir últimas `n` linhas de um arquivo
+    
+    
     private String tail(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
-        return file.map(f -> {
-            List<String> lines = Arrays.asList(f.getContent().split("\n"));
-            return lines.stream().skip(Math.max(0, lines.size() - n)).collect(Collectors.joining("\n"));
-        }).orElse("tail: " + fileName + ": No such file or directory");
+        
+        if (file.isEmpty()) {
+            return "tail: " + fileName + ": No such file or directory";
+        }
+    
+        List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
+        int startIndex = Math.max(0, lines.size() - n);  // Pegando as últimas N linhas
+    
+        // Remover aspas extras nas linhas antes de retornar
+        return lines.subList(startIndex, lines.size()).stream()
+                    .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
+                    .collect(Collectors.joining("\n"));
     }
-
-    // ✅ wc: Conta linhas, palavras e caracteres em um arquivo
+    
     private String wc(String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
         return file.map(f -> {
@@ -340,30 +379,58 @@ public class TerminalService {
             return lines + " " + words + " " + chars + " " + fileName;
         }).orElse("wc: " + fileName + ": No such file or directory");
     }
+    
 
     // ✅ stat: Exibe detalhes de um arquivo ou diretório
     private String stat(String name) {
-        Optional<Directory> dir = currentDirectory.findSubdirectory(name);
         Optional<File> file = currentDirectory.findFile(name);
-
-        if (dir.isPresent()) {
-            return "Directory: " + name + " (size: " + dir.get().getSubdirectories().size() + " subdirectories)";
-        }
+        Optional<Directory> dir = currentDirectory.findSubdirectory(name);
+    
         if (file.isPresent()) {
-            return "File: " + name + " (size: " + file.get().getContent().length() + " bytes)";
+            return "File: " + name + "\nSize: " + file.get().getContent().length() + " bytes";
+        }
+        if (dir.isPresent()) {
+            return "Directory: " + name + "\nSubdirectories: " + dir.get().getSubdirectories().size();
         }
         return "stat: cannot stat '" + name + "': No such file or directory";
     }
+    
 
     // ✅ du: Exibe o tamanho do diretório
     private String du(String name) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
-        if (dir.isPresent()) {
-            return "Directory size: " + dir.get().getSubdirectories().size() + " directories";
+        
+        if (dir.isEmpty()) {
+            return "du: cannot access '" + name + "': No such file or directory";
         }
-        return "du: cannot access '" + name + "': No such file or directory";
+    
+        int totalSize = calculateDirectorySize(dir.get());
+        
+        return "Directory size: " + totalSize + " bytes";
     }
-
+    
+    // Função auxiliar para calcular o tamanho total de arquivos dentro do diretório
+    private int calculateDirectorySize(Directory dir) {
+        int size = 0;
+    
+        System.out.println("DEBUG: Verificando arquivos dentro do diretório '" + dir.getName() + "'");
+    
+        // Somar tamanho de todos os arquivos dentro do diretório
+        for (File file : dir.getFiles()) {
+            int fileSize = file.getContent().length();
+            System.out.println("DEBUG: Arquivo '" + file.getName() + "' tamanho: " + fileSize);
+            size += fileSize;
+        }
+    
+        // Percorrer subdiretórios e somar seus tamanhos recursivamente
+        for (Directory subdir : dir.getSubdirectories()) {
+            size += calculateDirectorySize(subdir);
+        }
+    
+        System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size);
+        return size;
+    }
+    
     // ✅ cp: Copia arquivos ou diretórios
     private String cp(String source, String destination) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(source);
@@ -423,17 +490,80 @@ public class TerminalService {
     
     // ✅ diff: Compara arquivos
     private String diff(String file1, String file2) {
-        return "diff: simulated comparison between '" + file1 + "' and '" + file2 + "'";
+        Optional<File> f1 = currentDirectory.findFile(file1);
+        Optional<File> f2 = currentDirectory.findFile(file2);
+    
+        if (f1.isPresent() && f2.isPresent()) {
+            List<String> lines1 = Arrays.asList(f1.get().getContent().split("\n"));
+            List<String> lines2 = Arrays.asList(f2.get().getContent().split("\n"));
+    
+            StringBuilder result = new StringBuilder();
+            int maxLines = Math.max(lines1.size(), lines2.size());
+    
+            for (int i = 0; i < maxLines; i++) {
+                String line1 = (i < lines1.size()) ? lines1.get(i) : "";
+                String line2 = (i < lines2.size()) ? lines2.get(i) : "";
+    
+                if (!line1.equals(line2)) {
+                    result.append("< " + line1 + "\n> " + line2 + "\n");
+                }
+            }
+            return result.toString().isEmpty() ? "No differences found." : result.toString();
+        }
+        return "diff: One or both files do not exist";
     }
+    
 
-    // ✅ zip: Simula compactação de arquivos
-    private String zip(String[] items) {
-        return "zip: simulated compression for " + String.join(", ", Arrays.copyOfRange(items, 1, items.length));
+    private Map<String, List<File>> zipStorage = new HashMap<>();
+    private String zip(String[] args) {
+        if (args.length < 3) return "zip: missing operands";
+    
+        String zipName = args[1]; // Nome do arquivo ZIP
+        List<File> zipFiles = new ArrayList<>();
+    
+        System.out.println("DEBUG: Arquivos disponíveis no diretório atual:");
+        for (File f : currentDirectory.getFiles()) {
+            System.out.println("- " + f.getName());
+        }
+    
+        for (int i = 2; i < args.length; i++) {
+            String fileName = args[i].trim(); // Remover espaços extras
+            Optional<File> file = currentDirectory.findFile(fileName);
+            
+            if (file.isPresent()) {
+                System.out.println("DEBUG: Arquivo encontrado - " + fileName);
+                File copiedFile = new File(file.get().getName());
+                copiedFile.setContent(file.get().getContent());
+                zipFiles.add(copiedFile);
+            } else {
+                System.out.println("DEBUG: ERRO - Arquivo não encontrado - " + fileName);
+                return "zip: " + fileName + ": No such file or directory";
+            }
+        }
+    
+        if (zipFiles.isEmpty()) return "zip: No valid files to compress";
+    
+        zipStorage.put(zipName, zipFiles);
+        return "zip: " + zipName + " created with " + zipFiles.size() + " files.";
     }
-
-    // ✅ unzip: Simula extração de arquivos
-    private String unzip(String zipFile) {
-        return "unzip: simulated extraction for '" + zipFile + "'";
+    
+    
+    private String unzip(String zipName) {
+        List<File> zipFiles = zipStorage.get(zipName);
+        if (zipFiles == null) return "unzip: cannot find '" + zipName + "'";
+    
+        for (File file : zipFiles) {
+            if (currentDirectory.findFile(file.getName()).isPresent()) {
+                return "unzip: " + file.getName() + " already exists in the directory.";
+            }
+            File extractedFile = new File(file.getName());
+            extractedFile.setContent(file.getContent());
+            currentDirectory.addFile(extractedFile);
+        }
+    
+        return "unzip: " + zipName + " extracted.";
     }
+    
+    
 
 }

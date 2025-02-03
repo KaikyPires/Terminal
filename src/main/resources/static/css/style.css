@@ -5,8 +5,8 @@ body {
   
   .terminal-window {
     text-align: left;
-    width: 750px;
-    height: 500px;
+    width: 850px;
+    height: 600px;
     border-radius: 10px;
     margin: auto;
     position: relative;
@@ -40,7 +40,7 @@ body {
     flex-direction: column;
     gap: 5px;
     overflow-y: auto;
-    max-height: 500px;
+    max-height: 600px;
 }
 
 .history {
