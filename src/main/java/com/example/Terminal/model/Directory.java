@@ -55,12 +55,12 @@ public class Directory {
         for (File file : files) {
             System.out.println("DEBUG: Comparando com '" + file.getName() + "'");
             if (file.getName().trim().equals(name.trim())) {
-                System.out.println("DEBUG: Arquivo encontrado -> " + file.getName());
+                System.out.println("DEBUG: Arquivo '" + name + "' encontrado!");
                 return Optional.of(file);
             }
         }
-        
-        System.out.println("DEBUG: Arquivo '" + name + "' NÃO encontrado no diretório '" + this.getName() + "'");
+    
+        System.out.println("DEBUG: Arquivo '" + name + "' NÃO encontrado.");
         return Optional.empty();
     }
     

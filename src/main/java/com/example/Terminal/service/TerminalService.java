@@ -70,8 +70,7 @@ public class TerminalService {
             case "diff":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? diff(arg1, arg2) : "diff: missing operands";
                 case "zip":
-                return parts.length > 1 ? zip(parts) : "zip: missing operand";
-            
+                return (parts.length > 2) ? zip(Arrays.copyOfRange(parts, 1, parts.length)) : "zip: missing operands";            
             case "unzip":
                 return !arg1.isEmpty() ? unzip(arg1) : "unzip: missing operand";
             case "history":
@@ -130,12 +129,12 @@ public class TerminalService {
 
     // ✅ echo: Adicionar ou sobrescrever texto em arquivos
     private String echo(String command) {
-        command = command.replaceAll("^\"|\"$", ""); // Remove aspas no início e no final
+        command = command.replaceAll("^\"|\"$", ""); // Remove aspas extras
     
         if (command.contains(">>")) {
             String[] parts = command.split(">>", 2);
             if (parts.length < 2) return "echo: syntax error";
-            String content = parts[0].trim().replaceAll("\"", "");  // Remove aspas extras
+            String content = parts[0].trim();
             String fileName = parts[1].trim();
     
             Optional<File> file = currentDirectory.findFile(fileName);
@@ -144,15 +143,15 @@ public class TerminalService {
             } else {
                 File newFile = new File(fileName);
                 newFile.setContent(content);
-                currentDirectory.addFile(newFile);
+                currentDirectory.addFile(newFile); // Agora adicionamos o arquivo ao diretório correto
             }
     
-            System.out.println("DEBUG: Arquivo '" + fileName + "' atualizado com conteúdo: " + content);
+            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '" + currentDirectory.getName() + "'");
             return "";
         } else if (command.contains(">")) {
             String[] parts = command.split(">", 2);
             if (parts.length < 2) return "echo: syntax error";
-            String content = parts[0].trim().replaceAll("\"", "");  // Remove aspas extras
+            String content = parts[0].trim();
             String fileName = parts[1].trim();
     
             Optional<File> file = currentDirectory.findFile(fileName);
@@ -161,13 +160,13 @@ public class TerminalService {
             } else {
                 File newFile = new File(fileName);
                 newFile.setContent(content);
-                currentDirectory.addFile(newFile);
+                currentDirectory.addFile(newFile); // Agora adicionamos o arquivo ao diretório correto
             }
     
-            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content);
+            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '" + currentDirectory.getName() + "'");
             return "";
         } else {
-            return command.replaceAll("\"", ""); // Remove aspas antes de exibir
+            return command;
         }
     }
     
@@ -398,39 +397,44 @@ public class TerminalService {
 
     // ✅ du: Exibe o tamanho do diretório
     private String du(String name) {
-        Optional<Directory> dir = currentDirectory.findSubdirectory(name);
-        
-        if (dir.isEmpty()) {
-            return "du: cannot access '" + name + "': No such file or directory";
+        Directory targetDirectory;
+    
+        if (name.equals(".")) { 
+            targetDirectory = currentDirectory; // Se for ".", usar o diretório atual
+        } else {
+            Optional<Directory> dir = currentDirectory.findSubdirectory(name);
+            if (dir.isEmpty()) {
+                return "du: cannot access '" + name + "': No such file or directory";
+            }
+            targetDirectory = dir.get();
         }
     
-        int totalSize = calculateDirectorySize(dir.get());
-        
+        int totalSize = calculateDirectorySize(targetDirectory);
         return "Directory size: " + totalSize + " bytes";
     }
     
-    // Função auxiliar para calcular o tamanho total de arquivos dentro do diretório
+    
+    // 🔥 Função auxiliar para calcular o tamanho total do diretório e seus arquivos
     private int calculateDirectorySize(Directory dir) {
         int size = 0;
     
         System.out.println("DEBUG: Verificando arquivos dentro do diretório '" + dir.getName() + "'");
     
-        // Somar tamanho de todos os arquivos dentro do diretório
         for (File file : dir.getFiles()) {
             int fileSize = file.getContent().length();
-            System.out.println("DEBUG: Arquivo '" + file.getName() + "' tamanho: " + fileSize);
+            System.out.println("DEBUG: Arquivo '" + file.getName() + "' tamanho: " + fileSize + " bytes");
             size += fileSize;
         }
     
-        // Percorrer subdiretórios e somar seus tamanhos recursivamente
         for (Directory subdir : dir.getSubdirectories()) {
             size += calculateDirectorySize(subdir);
         }
     
-        System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size);
+        System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size + " bytes");
         return size;
     }
     
+
     // ✅ cp: Copia arquivos ou diretórios
     private String cp(String source, String destination) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(source);
@@ -512,56 +516,70 @@ public class TerminalService {
         }
         return "diff: One or both files do not exist";
     }
-    
-
-    private Map<String, List<File>> zipStorage = new HashMap<>();
     private String zip(String[] args) {
-        if (args.length < 3) return "zip: missing operands";
+        if (args.length < 2) return "zip: missing operands"; // Agora `args` já exclui o nome "zip"
     
-        String zipName = args[1]; // Nome do arquivo ZIP
-        List<File> zipFiles = new ArrayList<>();
-    
-        System.out.println("DEBUG: Arquivos disponíveis no diretório atual:");
-        for (File f : currentDirectory.getFiles()) {
-            System.out.println("- " + f.getName());
+        String zipName = args[0]; // O primeiro argumento é o nome do "arquivo ZIP"
+        if (!zipName.endsWith(".zip")) {
+            zipName += ".zip";
         }
     
-        for (int i = 2; i < args.length; i++) {
-            String fileName = args[i].trim(); // Remover espaços extras
+        Directory zipDirectory = new Directory(zipName, currentDirectory);
+        System.out.println("DEBUG: Criando pasta " + zipName + " para simular ZIP");
+    
+        boolean hasValidFiles = false;
+    
+        // 🚀 Pegando corretamente os arquivos (sem o nome do ZIP)
+        for (int i = 1; i < args.length; i++) {
+            String fileName = args[i].trim();
+            System.out.println("DEBUG: Buscando arquivo '" + fileName + "' no diretório '" + currentDirectory.getName() + "'");
+    
             Optional<File> file = currentDirectory.findFile(fileName);
-            
             if (file.isPresent()) {
-                System.out.println("DEBUG: Arquivo encontrado - " + fileName);
                 File copiedFile = new File(file.get().getName());
                 copiedFile.setContent(file.get().getContent());
-                zipFiles.add(copiedFile);
+                zipDirectory.addFile(copiedFile);
+                System.out.println("DEBUG: Arquivo '" + fileName + "' adicionado ao ZIP.");
+                hasValidFiles = true;
             } else {
-                System.out.println("DEBUG: ERRO - Arquivo não encontrado - " + fileName);
-                return "zip: " + fileName + ": No such file or directory";
+                System.out.println("DEBUG: ERRO - Arquivo '" + fileName + "' não encontrado.");
             }
         }
     
-        if (zipFiles.isEmpty()) return "zip: No valid files to compress";
+        if (!hasValidFiles) {
+            return "zip: No valid files to compress";
+        }
     
-        zipStorage.put(zipName, zipFiles);
-        return "zip: " + zipName + " created with " + zipFiles.size() + " files.";
+        currentDirectory.addDirectory(zipDirectory);
+        return "zip: " + zipName + " created with " + zipDirectory.getFiles().size() + " files.";
     }
     
-    
     private String unzip(String zipName) {
-        List<File> zipFiles = zipStorage.get(zipName);
-        if (zipFiles == null) return "unzip: cannot find '" + zipName + "'";
+        if (!zipName.endsWith(".zip")) {
+            zipName += ".zip";
+        }
     
-        for (File file : zipFiles) {
-            if (currentDirectory.findFile(file.getName()).isPresent()) {
-                return "unzip: " + file.getName() + " already exists in the directory.";
-            }
+        Optional<Directory> zipDirectory = currentDirectory.findSubdirectory(zipName);
+        
+        if (zipDirectory.isEmpty()) {
+            return "unzip: cannot find '" + zipName + "'";
+        }
+    
+        Directory zipFolder = zipDirectory.get();
+        int extractedFiles = 0;
+    
+        for (File file : zipFolder.getFiles()) {
+            // Extraindo arquivos de volta ao diretório atual
             File extractedFile = new File(file.getName());
             extractedFile.setContent(file.getContent());
             currentDirectory.addFile(extractedFile);
+            extractedFiles++;
+            System.out.println("DEBUG: Arquivo '" + file.getName() + "' extraído.");
         }
     
-        return "unzip: " + zipName + " extracted.";
+        // Removendo a pasta ZIP após a extração
+        currentDirectory.getSubdirectories().remove(zipFolder);
+        return "unzip: " + extractedFiles + " files extracted from " + zipName;
     }
     
     
