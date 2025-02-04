@@ -70,7 +70,18 @@ public class TerminalService {
             case "diff":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? diff(arg1, arg2) : "diff: missing operands";
                 case "zip":
-                return (parts.length > 2) ? zip(Arrays.copyOfRange(parts, 1, parts.length)) : "zip: missing operands";            
+                if (parts.length > 2) {
+                    // Verifica se todos os arquivos estão entre aspas
+                    for (int i = 2; i < parts.length; i++) {
+                        if (!parts[i].startsWith("\"") || !parts[i].endsWith("\"")) {
+                            return "Erro: Todos os arquivos devem estar entre aspas.";
+                        }
+                    }
+                    return zip(Arrays.copyOfRange(parts, 1, parts.length));
+                }
+                return "zip: missing operand";
+            
+                                              
             case "unzip":
                 return !arg1.isEmpty() ? unzip(arg1) : "unzip: missing operand";
             case "history":
@@ -209,20 +220,29 @@ public class TerminalService {
     
 
     // ✅ cd: Navegar entre diretórios
-    private String cd(String name) {
-        if (name.equals("..")) {
-            if (currentDirectory.getParent() != null) {
-                currentDirectory = currentDirectory.getParent();
-            }
-            return ""; // Navega para o diretório pai
-        }
-        Optional<Directory> newDir = currentDirectory.findSubdirectory(name);
-        if (newDir.isPresent()) {
-            currentDirectory = newDir.get();
-            return "";
-        }
-        return "cd: no such file or directory: " + name;
+    // ✅ cd: Navegar entre diretórios
+private String cd(String name) {
+    if (name.equals("/")) {
+        currentDirectory = root; // Volta para o diretório raiz (~)
+        return "";
     }
+
+    if (name.equals("..")) {
+        if (currentDirectory.getParent() != null) {
+            currentDirectory = currentDirectory.getParent();
+        }
+        return ""; // Navega para o diretório pai
+    }
+
+    Optional<Directory> newDir = currentDirectory.findSubdirectory(name);
+    if (newDir.isPresent()) {
+        currentDirectory = newDir.get();
+        return "";
+    }
+
+    return "cd: no such file or directory: " + name;
+}
+
 
     // ✅ find: Procurar arquivos e diretórios
     private String find(String name) {
@@ -517,42 +537,47 @@ public class TerminalService {
         return "diff: One or both files do not exist";
     }
     private String zip(String[] args) {
-        if (args.length < 2) return "zip: missing operands"; // Agora `args` já exclui o nome "zip"
+        if (args.length < 2) return "Erro: Nenhum arquivo especificado.";
     
-        String zipName = args[0]; // O primeiro argumento é o nome do "arquivo ZIP"
+        String zipName = args[0]; // O primeiro argumento deve ser o nome do ZIP
         if (!zipName.endsWith(".zip")) {
             zipName += ".zip";
         }
     
+        // Criar um novo diretório para simular o ZIP
         Directory zipDirectory = new Directory(zipName, currentDirectory);
-        System.out.println("DEBUG: Criando pasta " + zipName + " para simular ZIP");
+        System.out.println("DEBUG: Criando diretório '" + zipName + "' para simular ZIP");
     
         boolean hasValidFiles = false;
     
-        // 🚀 Pegando corretamente os arquivos (sem o nome do ZIP)
+        // 🔥 Processar cada arquivo removendo as aspas antes de buscar
         for (int i = 1; i < args.length; i++) {
-            String fileName = args[i].trim();
+            String fileName = args[i].replaceAll("^\"|\"$", "").trim(); // Remove aspas no início e no fim
             System.out.println("DEBUG: Buscando arquivo '" + fileName + "' no diretório '" + currentDirectory.getName() + "'");
     
             Optional<File> file = currentDirectory.findFile(fileName);
             if (file.isPresent()) {
+                // Criar uma cópia do arquivo dentro do ZIP
                 File copiedFile = new File(file.get().getName());
                 copiedFile.setContent(file.get().getContent());
                 zipDirectory.addFile(copiedFile);
-                System.out.println("DEBUG: Arquivo '" + fileName + "' adicionado ao ZIP.");
+                System.out.println("DEBUG: Arquivo '" + fileName + "' copiado para '" + zipName + "'");
                 hasValidFiles = true;
             } else {
-                System.out.println("DEBUG: ERRO - Arquivo '" + fileName + "' não encontrado.");
+                System.out.println("Aviso: O arquivo '" + fileName + "' não existe.");
             }
         }
     
         if (!hasValidFiles) {
-            return "zip: No valid files to compress";
+            return "Erro: Nenhum arquivo válido encontrado.";
         }
     
+        // Adicionar o diretório ZIP ao sistema de arquivos virtual
         currentDirectory.addDirectory(zipDirectory);
-        return "zip: " + zipName + " created with " + zipDirectory.getFiles().size() + " files.";
+    
+        return "Arquivos compactados em '" + zipName + "'";
     }
+    
     
     private String unzip(String zipName) {
         if (!zipName.endsWith(".zip")) {
