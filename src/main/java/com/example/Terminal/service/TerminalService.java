@@ -20,16 +20,16 @@ public class TerminalService {
 
     public String executeCommand(String command) {
         commandHistory.add(command);
-    
+
         if (command.startsWith("echo ")) {
             return echo(command.substring(5));
         }
-    
+
         String[] parts = command.split(" ", 3);
         String cmd = parts[0];
         String arg1 = (parts.length > 1) ? parts[1] : "";
         String arg2 = (parts.length > 2) ? parts[2] : "";
-    
+
         switch (cmd) {
             case "pwd":
                 return getCurrentPath();
@@ -69,7 +69,7 @@ public class TerminalService {
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? mv(arg1, arg2) : "mv: missing operands";
             case "diff":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? diff(arg1, arg2) : "diff: missing operands";
-                case "zip":
+            case "zip":
                 if (parts.length > 2) {
                     // Verifica se todos os arquivos estão entre aspas
                     for (int i = 2; i < parts.length; i++) {
@@ -80,24 +80,23 @@ public class TerminalService {
                     return zip(Arrays.copyOfRange(parts, 1, parts.length));
                 }
                 return "zip: missing operand";
-            
-                                              
+
             case "unzip":
                 return !arg1.isEmpty() ? unzip(arg1) : "unzip: missing operand";
             case "history":
                 return history();
             case "tail":
-                        return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2)) : "tail: missing operands";
-           case "wc":
-                        return !arg1.isEmpty() ? wc(arg1) : "wc: missing operand";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2))
+                        : "tail: missing operands";
+            case "wc":
+                return !arg1.isEmpty() ? wc(arg1) : "wc: missing operand";
             case "head":
-                        return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2)) : "head: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2))
+                        : "head: missing operands";
             default:
                 return "zsh: command not found: " + command;
         }
     }
-    
-    
 
     // ✅ Método pwd: Retorna o caminho atual
     private String getCurrentPath() {
@@ -141,13 +140,14 @@ public class TerminalService {
     // ✅ echo: Adicionar ou sobrescrever texto em arquivos
     private String echo(String command) {
         command = command.replaceAll("^\"|\"$", ""); // Remove aspas extras
-    
+
         if (command.contains(">>")) {
             String[] parts = command.split(">>", 2);
-            if (parts.length < 2) return "echo: syntax error";
+            if (parts.length < 2)
+                return "echo: syntax error";
             String content = parts[0].trim();
             String fileName = parts[1].trim();
-    
+
             Optional<File> file = currentDirectory.findFile(fileName);
             if (file.isPresent()) {
                 file.get().setContent(file.get().getContent() + "\n" + content);
@@ -156,15 +156,17 @@ public class TerminalService {
                 newFile.setContent(content);
                 currentDirectory.addFile(newFile); // Agora adicionamos o arquivo ao diretório correto
             }
-    
-            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '" + currentDirectory.getName() + "'");
+
+            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '"
+                    + currentDirectory.getName() + "'");
             return "";
         } else if (command.contains(">")) {
             String[] parts = command.split(">", 2);
-            if (parts.length < 2) return "echo: syntax error";
+            if (parts.length < 2)
+                return "echo: syntax error";
             String content = parts[0].trim();
             String fileName = parts[1].trim();
-    
+
             Optional<File> file = currentDirectory.findFile(fileName);
             if (file.isPresent()) {
                 file.get().setContent(content);
@@ -173,14 +175,15 @@ public class TerminalService {
                 newFile.setContent(content);
                 currentDirectory.addFile(newFile); // Agora adicionamos o arquivo ao diretório correto
             }
-    
-            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '" + currentDirectory.getName() + "'");
+
+            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '"
+                    + currentDirectory.getName() + "'");
             return "";
         } else {
             return command;
         }
     }
-    
+
     // ✅ cat: Mostrar conteúdo de arquivos
     private String cat(String fileName) {
         System.out.println("DEBUG: Current Directory -> " + currentDirectory.getName());
@@ -217,32 +220,30 @@ public class TerminalService {
         }
         return output.toString().trim();
     }
-    
 
     // ✅ cd: Navegar entre diretórios
     // ✅ cd: Navegar entre diretórios
-private String cd(String name) {
-    if (name.equals("/")) {
-        currentDirectory = root; // Volta para o diretório raiz (~)
-        return "";
-    }
-
-    if (name.equals("..")) {
-        if (currentDirectory.getParent() != null) {
-            currentDirectory = currentDirectory.getParent();
+    private String cd(String name) {
+        if (name.equals("/")) {
+            currentDirectory = root; // Volta para o diretório raiz (~)
+            return "";
         }
-        return ""; // Navega para o diretório pai
+
+        if (name.equals("..")) {
+            if (currentDirectory.getParent() != null) {
+                currentDirectory = currentDirectory.getParent();
+            }
+            return ""; // Navega para o diretório pai
+        }
+
+        Optional<Directory> newDir = currentDirectory.findSubdirectory(name);
+        if (newDir.isPresent()) {
+            currentDirectory = newDir.get();
+            return "";
+        }
+
+        return "cd: no such file or directory: " + name;
     }
-
-    Optional<Directory> newDir = currentDirectory.findSubdirectory(name);
-    if (newDir.isPresent()) {
-        currentDirectory = newDir.get();
-        return "";
-    }
-
-    return "cd: no such file or directory: " + name;
-}
-
 
     // ✅ find: Procurar arquivos e diretórios
     private String find(String name) {
@@ -250,7 +251,7 @@ private String cd(String name) {
         String result = searchRecursively(currentDirectory, name);
         return result.isEmpty() ? "find: no matches found for '" + name + "'" : result;
     }
-    
+
     private String searchRecursively(Directory dir, String name) {
         StringBuilder result = new StringBuilder();
         for (Directory subdir : dir.getSubdirectories()) {
@@ -266,28 +267,24 @@ private String cd(String name) {
         }
         return result.toString().isEmpty() ? "find: no matches found for '" + name + "'" : result.toString();
     }
-    
-    
 
     // ✅ grep: Procurar texto em arquivos
     private String grep(String term, String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
-        
+
         if (file.isEmpty()) {
             return "grep: " + fileName + ": No such file or directory";
         }
-    
+
         final String finalTerm = term.replaceAll("^\"|\"$", ""); // Remove aspas externas
-    
+
         List<String> matchingLines = Arrays.stream(file.get().getContent().split("\n"))
-                                           .filter(line -> line.contains(finalTerm))
-                                           .collect(Collectors.toList());
-    
-        return matchingLines.isEmpty() ? "grep: no matches found for '" + finalTerm + "'" 
-                                       : String.join("\n", matchingLines);
+                .filter(line -> line.contains(finalTerm))
+                .collect(Collectors.toList());
+
+        return matchingLines.isEmpty() ? "grep: no matches found for '" + finalTerm + "'"
+                : String.join("\n", matchingLines);
     }
-    
-    
 
     // ✅ chmod: Alterar permissões simuladas
     private String chmod(String permission, String name) {
@@ -298,14 +295,16 @@ private String cd(String name) {
         }
         return "chmod: cannot access '" + name + "': No such file or directory";
     }
-    
+
     private String convertPermission(String permission) {
-        if (permission.equals("777")) return "-rwxrwxrwx";
-        if (permission.equals("755")) return "-rwxr-xr-x";
-        if (permission.equals("644")) return "-rw-r--r--";
+        if (permission.equals("777"))
+            return "-rwxrwxrwx";
+        if (permission.equals("755"))
+            return "-rwxr-xr-x";
+        if (permission.equals("644"))
+            return "-rw-r--r--";
         return "-rw-r--r--"; // Padrão
     }
-    
 
     // ✅ chown: Alterar proprietário (simulado)
     private String chown(String owner, String name) {
@@ -338,7 +337,6 @@ private String cd(String name) {
         }
         return result.toString();
     }
-    
 
     // ✅ rename: Renomeia um arquivo ou diretório
     private String rename(String oldName, String newName) {
@@ -357,37 +355,36 @@ private String cd(String name) {
 
     private String head(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
-        
+
         if (file.isEmpty()) {
             return "head: " + fileName + ": No such file or directory";
         }
-    
+
         List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
-        int endIndex = Math.min(n, lines.size());  // Pegando as primeiras N linhas
-    
+        int endIndex = Math.min(n, lines.size()); // Pegando as primeiras N linhas
+
         // Remover aspas extras nas linhas antes de retornar
         return lines.subList(0, endIndex).stream()
-                    .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
-                    .collect(Collectors.joining("\n"));
+                .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
+                .collect(Collectors.joining("\n"));
     }
-    
-    
+
     private String tail(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
-        
+
         if (file.isEmpty()) {
             return "tail: " + fileName + ": No such file or directory";
         }
-    
+
         List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
-        int startIndex = Math.max(0, lines.size() - n);  // Pegando as últimas N linhas
-    
+        int startIndex = Math.max(0, lines.size() - n); // Pegando as últimas N linhas
+
         // Remover aspas extras nas linhas antes de retornar
         return lines.subList(startIndex, lines.size()).stream()
-                    .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
-                    .collect(Collectors.joining("\n"));
+                .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
+                .collect(Collectors.joining("\n"));
     }
-    
+
     private String wc(String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
         return file.map(f -> {
@@ -398,13 +395,12 @@ private String cd(String name) {
             return lines + " " + words + " " + chars + " " + fileName;
         }).orElse("wc: " + fileName + ": No such file or directory");
     }
-    
 
     // ✅ stat: Exibe detalhes de um arquivo ou diretório
     private String stat(String name) {
         Optional<File> file = currentDirectory.findFile(name);
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
-    
+
         if (file.isPresent()) {
             return "File: " + name + "\nSize: " + file.get().getContent().length() + " bytes";
         }
@@ -413,13 +409,12 @@ private String cd(String name) {
         }
         return "stat: cannot stat '" + name + "': No such file or directory";
     }
-    
 
     // ✅ du: Exibe o tamanho do diretório
     private String du(String name) {
         Directory targetDirectory;
-    
-        if (name.equals(".")) { 
+
+        if (name.equals(".")) {
             targetDirectory = currentDirectory; // Se for ".", usar o diretório atual
         } else {
             Optional<Directory> dir = currentDirectory.findSubdirectory(name);
@@ -428,38 +423,36 @@ private String cd(String name) {
             }
             targetDirectory = dir.get();
         }
-    
+
         int totalSize = calculateDirectorySize(targetDirectory);
         return "Directory size: " + totalSize + " bytes";
     }
-    
-    
+
     // 🔥 Função auxiliar para calcular o tamanho total do diretório e seus arquivos
     private int calculateDirectorySize(Directory dir) {
         int size = 0;
-    
+
         System.out.println("DEBUG: Verificando arquivos dentro do diretório '" + dir.getName() + "'");
-    
+
         for (File file : dir.getFiles()) {
             int fileSize = file.getContent().length();
             System.out.println("DEBUG: Arquivo '" + file.getName() + "' tamanho: " + fileSize + " bytes");
             size += fileSize;
         }
-    
+
         for (Directory subdir : dir.getSubdirectories()) {
             size += calculateDirectorySize(subdir);
         }
-    
+
         System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size + " bytes");
         return size;
     }
-    
 
     // ✅ cp: Copia arquivos ou diretórios
     private String cp(String source, String destination) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(source);
         Optional<File> file = currentDirectory.findFile(source);
-    
+
         if (file.isPresent()) {
             File newFile = new File(destination);
             newFile.setContent(file.get().getContent());
@@ -471,12 +464,12 @@ private String cd(String name) {
             if (currentDirectory.findSubdirectory(destination).isPresent()) {
                 return "cp: cannot copy '" + source + "': destination already exists";
             }
-    
+
             // Impedir a cópia do diretório dentro dele mesmo
             if (source.equals(destination)) {
                 return "cp: cannot copy a directory into itself";
             }
-    
+
             Directory originalDir = dir.get();
             Directory newDir = new Directory(destination, currentDirectory);
             for (File f : originalDir.getFiles()) {
@@ -490,44 +483,42 @@ private String cd(String name) {
         }
         return "cp: cannot copy '" + source + "': No such file or directory";
     }
-    
 
-        private String mv(String source, String destination) {
-            Optional<Directory> dir = currentDirectory.findSubdirectory(source);
-            Optional<File> file = currentDirectory.findFile(source);
-        
-            if (dir.isPresent()) {
-                Directory targetDir = dir.get();
-                targetDir.setName(destination);
-                currentDirectory.getSubdirectories().remove(targetDir);
-                currentDirectory.addDirectory(targetDir);
-                return "";
-            }
-            if (file.isPresent()) {
-                File targetFile = file.get();
-                targetFile.setName(destination);
-                return "";
-            }
-            return "mv: cannot move '" + source + "': No such file or directory";
+    private String mv(String source, String destination) {
+        Optional<Directory> dir = currentDirectory.findSubdirectory(source);
+        Optional<File> file = currentDirectory.findFile(source);
+
+        if (dir.isPresent()) {
+            Directory targetDir = dir.get();
+            targetDir.setName(destination);
+            currentDirectory.getSubdirectories().remove(targetDir);
+            currentDirectory.addDirectory(targetDir);
+            return "";
         }
-        
-    
+        if (file.isPresent()) {
+            File targetFile = file.get();
+            targetFile.setName(destination);
+            return "";
+        }
+        return "mv: cannot move '" + source + "': No such file or directory";
+    }
+
     // ✅ diff: Compara arquivos
     private String diff(String file1, String file2) {
         Optional<File> f1 = currentDirectory.findFile(file1);
         Optional<File> f2 = currentDirectory.findFile(file2);
-    
+
         if (f1.isPresent() && f2.isPresent()) {
             List<String> lines1 = Arrays.asList(f1.get().getContent().split("\n"));
             List<String> lines2 = Arrays.asList(f2.get().getContent().split("\n"));
-    
+
             StringBuilder result = new StringBuilder();
             int maxLines = Math.max(lines1.size(), lines2.size());
-    
+
             for (int i = 0; i < maxLines; i++) {
                 String line1 = (i < lines1.size()) ? lines1.get(i) : "";
                 String line2 = (i < lines2.size()) ? lines2.get(i) : "";
-    
+
                 if (!line1.equals(line2)) {
                     result.append("< " + line1 + "\n> " + line2 + "\n");
                 }
@@ -536,25 +527,43 @@ private String cd(String name) {
         }
         return "diff: One or both files do not exist";
     }
+
     private String zip(String[] args) {
-        if (args.length < 2) return "Erro: Nenhum arquivo especificado.";
-    
+        System.out.println("DEBUG: Comando ZIP chamado com argumentos: " + Arrays.toString(args));
+
+        if (args.length < 2)
+            return "Erro: Nenhum arquivo especificado.";
+
         String zipName = args[0]; // O primeiro argumento deve ser o nome do ZIP
         if (!zipName.endsWith(".zip")) {
             zipName += ".zip";
         }
-    
+
         // Criar um novo diretório para simular o ZIP
         Directory zipDirectory = new Directory(zipName, currentDirectory);
         System.out.println("DEBUG: Criando diretório '" + zipName + "' para simular ZIP");
-    
+
         boolean hasValidFiles = false;
-    
-        // 🔥 Processar cada arquivo removendo as aspas antes de buscar
+        List<String> arquivosParaCompactar = new ArrayList<>();
+
+        // 🔥 Garantindo que os arquivos sejam corretamente separados e sem aspas extras
         for (int i = 1; i < args.length; i++) {
-            String fileName = args[i].replaceAll("^\"|\"$", "").trim(); // Remove aspas no início e no fim
-            System.out.println("DEBUG: Buscando arquivo '" + fileName + "' no diretório '" + currentDirectory.getName() + "'");
-    
+            String[] arquivosSeparados = args[i].split("\\s+"); // Divide corretamente caso args[i] esteja concatenado
+            for (String file : arquivosSeparados) {
+                file = file.replaceAll("^\"|\"$", "").trim(); // Remove aspas no início e no fim
+                if (!file.isEmpty()) {
+                    arquivosParaCompactar.add(file);
+                }
+            }
+        }
+
+        System.out.println("DEBUG: Arquivos extraídos corretamente: " + arquivosParaCompactar);
+
+        // 🔹 Processamento dos arquivos para compactação
+        for (String fileName : arquivosParaCompactar) {
+            System.out.println(
+                    "DEBUG: Buscando arquivo '" + fileName + "' no diretório '" + currentDirectory.getName() + "'");
+
             Optional<File> file = currentDirectory.findFile(fileName);
             if (file.isPresent()) {
                 // Criar uma cópia do arquivo dentro do ZIP
@@ -567,32 +576,31 @@ private String cd(String name) {
                 System.out.println("Aviso: O arquivo '" + fileName + "' não existe.");
             }
         }
-    
+
         if (!hasValidFiles) {
             return "Erro: Nenhum arquivo válido encontrado.";
         }
-    
+
         // Adicionar o diretório ZIP ao sistema de arquivos virtual
         currentDirectory.addDirectory(zipDirectory);
-    
+
         return "Arquivos compactados em '" + zipName + "'";
     }
-    
-    
+
     private String unzip(String zipName) {
         if (!zipName.endsWith(".zip")) {
             zipName += ".zip";
         }
-    
+
         Optional<Directory> zipDirectory = currentDirectory.findSubdirectory(zipName);
-        
+
         if (zipDirectory.isEmpty()) {
             return "unzip: cannot find '" + zipName + "'";
         }
-    
+
         Directory zipFolder = zipDirectory.get();
         int extractedFiles = 0;
-    
+
         for (File file : zipFolder.getFiles()) {
             // Extraindo arquivos de volta ao diretório atual
             File extractedFile = new File(file.getName());
@@ -601,12 +609,10 @@ private String cd(String name) {
             extractedFiles++;
             System.out.println("DEBUG: Arquivo '" + file.getName() + "' extraído.");
         }
-    
+
         // Removendo a pasta ZIP após a extração
         currentDirectory.getSubdirectories().remove(zipFolder);
         return "unzip: " + extractedFiles + " files extracted from " + zipName;
     }
-    
-    
 
 }

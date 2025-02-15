@@ -1,10 +1,6 @@
 package com.example.Terminal.model;
 
 import java.util.*;
-
-import java.util.*;
-
-
 public class Directory {
     private String name;
     
