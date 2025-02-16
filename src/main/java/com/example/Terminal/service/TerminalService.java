@@ -39,8 +39,8 @@ public class TerminalService {
                 return !arg1.isEmpty() ? mkdir(arg1) : "mkdir: missing operand";
             case "rmdir":
                 return !arg1.isEmpty() ? rmdir(arg1) : "rmdir: missing operand";
-            case "tree":
-                return printTree(currentDirectory, 0);
+                case "tree":
+                return printTree(currentDirectory, "");            
             case "rename":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? rename(arg1, arg2) : "rename: missing operands";
             case "touch":
@@ -340,16 +340,36 @@ public class TerminalService {
     }
 
     // ✅ tree: Exibe estrutura de diretórios
-    private String printTree(Directory dir, int level) {
-        StringBuilder result = new StringBuilder("  ".repeat(level) + dir.getName() + "/\n");
-        for (Directory subdir : dir.getSubdirectories()) {
-            result.append(printTree(subdir, level + 1));
+    private String printTree(Directory dir, String prefix) {
+        StringBuilder result = new StringBuilder();
+        
+        List<Directory> subdirs = dir.getSubdirectories();
+        List<File> files = dir.getFiles();
+        int totalItems = subdirs.size() + files.size();
+        
+        int index = 0;
+        for (Directory subdir : subdirs) {
+            boolean isLast = (index == totalItems - 1);
+            result.append(prefix)
+                  .append(isLast ? "└── " : "├── ")
+                  .append(subdir.getName())
+                  .append("\n");
+            result.append(printTree(subdir, prefix + (isLast ? "    " : "│   ")));
+            index++;
         }
-        for (File file : dir.getFiles()) {
-            result.append("  ".repeat(level + 1)).append(file.getName()).append("\n");
+    
+        for (File file : files) {
+            boolean isLast = (index == totalItems - 1);
+            result.append(prefix)
+                  .append(isLast ? "└── " : "├── ")
+                  .append(file.getName())
+                  .append("\n");
+            index++;
         }
+    
         return result.toString();
     }
+    
 
     // ✅ rename: Renomeia um arquivo ou diretório
     private String rename(String oldName, String newName) {
