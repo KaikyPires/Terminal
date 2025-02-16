@@ -15,14 +15,13 @@ public class TerminalController {
     @PostMapping("/execute")
     public String executeCommand(@RequestBody String command) {
         String output = terminalService.executeCommand(command).trim();
-    
-        // 🔥 Garante que o prompt NÃO seja duplicado
-        if (output.isEmpty()) {
-            return terminalService.getPrompt();
-        }
-    
-        return output + "\n\n" + terminalService.getPrompt(); // Adiciona uma linha antes do novo prompt
+
+        // 🔥 Retorna apenas a saída do comando, sem adicionar o prompt novamente
+        return output.isEmpty() ? "" : output;
     }
-    
-    
+
+    @GetMapping("/current-path")
+    public String getCurrentPath() {
+        return terminalService.getCurrentPath();
+    }
 }

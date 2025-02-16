@@ -1,16 +1,15 @@
 document.addEventListener("DOMContentLoaded", async function () { 
     const terminalHistory = document.querySelector(".history");
     const apiUrl = "http://localhost:8080/api/terminal/execute";
+    let currentPrompt = "user@terminal:~ $";
     const commandList = [
         "pwd", "mkdir", "rmdir", "tree", "rename", "touch", "cat",
         "rm", "ls", "cd", "find", "grep", "chmod", "chown", "stat",
         "du", "cp", "mv", "diff", "zip", "unzip", "history", "tail",
         "wc", "head", "help", "exit", "echo"
     ];
-
     let commandHistory = [];  // Histórico de comandos
     let historyIndex = -1;  // Índice do histórico
-
     // 🔥 Criar o primeiro prompt assim que a página carregar
     createNewPrompt();
 
@@ -71,30 +70,35 @@ document.addEventListener("DOMContentLoaded", async function () {
             createNewPrompt(); // Garante que o prompt aparece após limpar
             return;
         }
-
+    
         try {
             const response = await fetch(apiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "text/plain" },
                 body: command,
             });
-
+    
             const output = await response.text();
             addToHistory(command, output);
+    
+            // 🔥 Agora espera a atualização do caminho antes de criar o próximo prompt
+            await updatePrompt();
+            await createNewPrompt();
         } catch (error) {
             console.error("Erro ao processar comando:", error);
             addToHistory(command, "Erro ao conectar com o servidor: " + error.message);
         }
     }
-
-    function addToHistory(command, output) {
+    
+    
+    async function addToHistory(command, output) {
         const commandContainer = document.createElement("div");
         commandContainer.classList.add("history-entry");
 
-        // Criar o prompt com o comando digitado
+        // 🔥 Usa o último prompt conhecido ANTES do comando ser executado
         const userPrompt = document.createElement("div");
         userPrompt.classList.add("command-line");
-        userPrompt.innerHTML = `<span class="prompt">${getCurrentPrompt()}</span> ${command}`;
+        userPrompt.innerHTML = `<span class="prompt">${currentPrompt}</span> ${command}`;
 
         commandContainer.appendChild(userPrompt);
 
@@ -113,7 +117,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         commandContainer.scrollIntoView({ behavior: "smooth" });
     }
 
-    function createNewPrompt() {
+    async function createNewPrompt() {
         // 🔥 Remover qualquer input antigo antes de criar um novo
         const existingInput = document.querySelector(".cmd-input");
         if (existingInput) {
@@ -123,8 +127,9 @@ document.addEventListener("DOMContentLoaded", async function () {
         const inputContainer = document.createElement("div");
         inputContainer.classList.add("input-line");
 
+        // 🔥 Usa o último prompt conhecido
         inputContainer.innerHTML = `
-            <span class="prompt">${getCurrentPrompt()}</span>
+            <span class="prompt">${currentPrompt}</span>
             <input type="text" class="cmd-input" autofocus>
         `;
 
@@ -139,7 +144,17 @@ document.addEventListener("DOMContentLoaded", async function () {
     function getCurrentPrompt() {
         return "user@terminal:~$"; // Ajuste conforme necessário
     }
-
+    async function updatePrompt() {
+        try {
+            const response = await fetch("http://localhost:8080/api/terminal/current-path");
+            if (!response.ok) throw new Error("Erro ao obter caminho atual");
+            const currentPath = await response.text();
+            currentPrompt = `user@terminal:${currentPath} $`; // 🔥 Atualiza o caminho corretamente
+        } catch (error) {
+            console.error(error);
+        }
+    }
+    
     function autocompleteCommand(inputElement) {
         const typedText = inputElement.value.trim().toLowerCase();
         if (!typedText) return;

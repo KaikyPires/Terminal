@@ -1,6 +1,9 @@
 package com.example.Terminal.service;
 
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import com.example.Terminal.model.Directory;
 import com.example.Terminal.model.File;
@@ -17,8 +20,6 @@ public class TerminalService {
         this.root = new Directory("~", null);
         this.currentDirectory = root;
     }
-  
-
 
     public String executeCommand(String command) {
         commandHistory.add(command);
@@ -95,19 +96,18 @@ public class TerminalService {
             case "head":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2))
                         : "head: missing operands";
-             case "help":
-                        return getHelpMessage();
-                    
+            case "help":
+                return getHelpMessage();
+
             case "exit":
                 resetTerminal();
-                    return "exit: Terminal encerrado. Inicie uma nova sessão.";        
+                return "exit: Terminal encerrado. Inicie uma nova sessão.";
             default:
                 return "zsh: command not found: " + command;
         }
     }
 
-    
-    private String getCurrentPath() {
+    public String getCurrentPath() {
         StringBuilder path = new StringBuilder();
         Directory temp = currentDirectory;
         while (temp != null) {
@@ -196,18 +196,17 @@ public class TerminalService {
     private String cat(String fileName) {
         System.out.println("DEBUG: Current Directory -> " + currentDirectory.getName());
         System.out.println("DEBUG: Files in Current Directory -> " + currentDirectory.getFiles());
-    
+
         Optional<File> file = currentDirectory.findFile(fileName);
-    
+
         if (file.isPresent()) {
             String content = file.get().getContent();
-            content = content.replaceAll("\"$", ""); 
+            content = content.replaceAll("\"$", "");
             return content;
         }
-    
+
         return "cat: " + fileName + ": No such file or directory";
     }
-    
 
     private String rm(String name) {
         Optional<File> file = currentDirectory.findFile(name);
@@ -225,16 +224,54 @@ public class TerminalService {
 
     private String ls(boolean isDetailed) {
         StringBuilder output = new StringBuilder();
-        for (Directory dir : currentDirectory.getSubdirectories()) {
-            output.append(isDetailed ? "drwxr-xr-x " : "").append(dir.getName()).append("/\n");
+
+        // 🔥 Obtém o formato de data para simular `ls -l`
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM dd HH:mm");
+
+        // 🔥 Obtém os itens e os ordena corretamente
+        List<Directory> dirs = currentDirectory.getSubdirectories().stream()
+                .sorted(Comparator.comparing(Directory::getName))
+                .toList();
+
+        List<File> files = currentDirectory.getFiles().stream()
+                .sorted(Comparator.comparing(File::getName))
+                .toList();
+
+        if (isDetailed) {
+            // 🔹 `ls -l`: Exibe informações detalhadas (permissões, dono, grupo, tamanho, data, nome)
+            for (Directory dir : dirs) {
+                String formattedDate = LocalDateTime.now().format(dateFormat);
+                output.append(String.format("drwxr-xr-x  user  root  4096  %s  %s/\n", formattedDate, dir.getName()));
+            }
+            for (File file : files) {
+                String permission = permissions.getOrDefault(file.getName(), "-rw-r--r--");
+                int size = file.getContent().length();
+                String formattedDate = LocalDateTime.now().format(dateFormat);
+                output.append(String.format("%s  user  root  %4d  %s  %s\n", permission, size, formattedDate,
+                        file.getName()));
+            }
+        } else {
+            // 🔹 `ls`: Exibe os arquivos e diretórios em colunas, organizados
+            List<String> items = new ArrayList<>();
+            for (Directory dir : dirs)
+                items.add(dir.getName() + "/");
+            for (File file : files)
+                items.add(file.getName());
+
+            int colWidth = 15; // Largura da coluna
+            int numCols = 4; // Número de colunas exibidas antes da quebra de linha
+            int index = 0;
+
+            for (String item : items) {
+                output.append(String.format("%-" + colWidth + "s", item));
+                index++;
+                if (index % numCols == 0)
+                    output.append("\n"); // Quebra de linha a cada 4 itens
+            }
         }
-        for (File file : currentDirectory.getFiles()) {
-            String permission = permissions.getOrDefault(file.getName(), "-rw-r--r--");
-            output.append(isDetailed ? permission + " " : "").append(file.getName()).append("\n");
-        }
+
         return output.toString().trim();
     }
-
 
     private String cd(String name) {
         if (name.equals("/")) {
@@ -316,7 +353,7 @@ public class TerminalService {
             return "-rwxr-xr-x";
         if (permission.equals("644"))
             return "-rw-r--r--";
-        return "-rw-r--r--"; 
+        return "-rw-r--r--";
     }
 
     // ✅ chown: Alterar proprietário (simulado)
@@ -336,7 +373,7 @@ public class TerminalService {
     }
 
     public String getPrompt() {
-            return "user@terminal:" +getCurrentPath() + " $";
+        return getCurrentPath();
     }
 
     // ✅ tree: Exibe estrutura de diretórios
@@ -647,21 +684,23 @@ public class TerminalService {
         currentDirectory.getSubdirectories().remove(zipFolder);
         return "unzip: " + extractedFiles + " files extracted from " + zipName;
     }
+
     private void resetTerminal() {
         System.out.println("DEBUG: Resetando terminal...");
-        
+
         // Voltar para o diretório raiz
         currentDirectory = root;
-    
+
         // Limpar todos os arquivos e diretórios criados na sessão
         root.getSubdirectories().clear();
         root.getFiles().clear();
-        
+
         // Limpar histórico de comandos
         commandHistory.clear();
-    
+
         System.out.println("DEBUG: Terminal resetado.");
     }
+
     private String getHelpMessage() {
         return "Comandos disponíveis:\n"
                 + "  - pwd: Exibe o caminho atual do diretório\n"
@@ -689,5 +728,5 @@ public class TerminalService {
                 + "  - history: Exibe o histórico de comandos digitados\n"
                 + "  - exit: Encerra a sessão do terminal e reseta os dados\n";
     }
-    
+
 }
