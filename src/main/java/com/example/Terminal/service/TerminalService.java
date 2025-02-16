@@ -17,6 +17,8 @@ public class TerminalService {
         this.root = new Directory("~", null);
         this.currentDirectory = root;
     }
+  
+
 
     public String executeCommand(String command) {
         commandHistory.add(command);
@@ -93,12 +95,18 @@ public class TerminalService {
             case "head":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2))
                         : "head: missing operands";
+             case "help":
+                        return getHelpMessage();
+                    
+            case "exit":
+                resetTerminal();
+                    return "exit: Terminal encerrado. Inicie uma nova sessão.";        
             default:
                 return "zsh: command not found: " + command;
         }
     }
 
-    // ✅ Método pwd: Retorna o caminho atual
+    
     private String getCurrentPath() {
         StringBuilder path = new StringBuilder();
         Directory temp = currentDirectory;
@@ -188,12 +196,19 @@ public class TerminalService {
     private String cat(String fileName) {
         System.out.println("DEBUG: Current Directory -> " + currentDirectory.getName());
         System.out.println("DEBUG: Files in Current Directory -> " + currentDirectory.getFiles());
+    
         Optional<File> file = currentDirectory.findFile(fileName);
-        return file.map(File::getContent)
-                .orElse("cat: " + fileName + ": No such file or directory");
+    
+        if (file.isPresent()) {
+            String content = file.get().getContent();
+            content = content.replaceAll("\"$", ""); 
+            return content;
+        }
+    
+        return "cat: " + fileName + ": No such file or directory";
     }
+    
 
-    // ✅ rm: Remover arquivos ou diretórios
     private String rm(String name) {
         Optional<File> file = currentDirectory.findFile(name);
         if (file.isPresent()) {
@@ -208,7 +223,6 @@ public class TerminalService {
         return "rm: cannot remove '" + name + "': No such file or directory";
     }
 
-    // ✅ ls: Listar arquivos e diretórios
     private String ls(boolean isDetailed) {
         StringBuilder output = new StringBuilder();
         for (Directory dir : currentDirectory.getSubdirectories()) {
@@ -221,8 +235,7 @@ public class TerminalService {
         return output.toString().trim();
     }
 
-    // ✅ cd: Navegar entre diretórios
-    // ✅ cd: Navegar entre diretórios
+
     private String cd(String name) {
         if (name.equals("/")) {
             currentDirectory = root; // Volta para o diretório raiz (~)
@@ -303,7 +316,7 @@ public class TerminalService {
             return "-rwxr-xr-x";
         if (permission.equals("644"))
             return "-rw-r--r--";
-        return "-rw-r--r--"; // Padrão
+        return "-rw-r--r--"; 
     }
 
     // ✅ chown: Alterar proprietário (simulado)
@@ -323,7 +336,7 @@ public class TerminalService {
     }
 
     public String getPrompt() {
-        return getCurrentPath() + " $ ";
+            return "user@terminal:" +getCurrentPath() + " $";
     }
 
     // ✅ tree: Exibe estrutura de diretórios
@@ -614,5 +627,47 @@ public class TerminalService {
         currentDirectory.getSubdirectories().remove(zipFolder);
         return "unzip: " + extractedFiles + " files extracted from " + zipName;
     }
-
+    private void resetTerminal() {
+        System.out.println("DEBUG: Resetando terminal...");
+        
+        // Voltar para o diretório raiz
+        currentDirectory = root;
+    
+        // Limpar todos os arquivos e diretórios criados na sessão
+        root.getSubdirectories().clear();
+        root.getFiles().clear();
+        
+        // Limpar histórico de comandos
+        commandHistory.clear();
+    
+        System.out.println("DEBUG: Terminal resetado.");
+    }
+    private String getHelpMessage() {
+        return "Comandos disponíveis:\n"
+                + "  - pwd: Exibe o caminho atual do diretório\n"
+                + "  - mkdir [dir]: Cria um novo diretório\n"
+                + "  - rmdir [dir]: Remove um diretório vazio\n"
+                + "  - tree: Exibe a estrutura hierárquica de diretórios\n"
+                + "  - rename [nome_atual] [novo_nome]: Renomeia um arquivo ou diretório\n"
+                + "  - touch [arquivo]: Cria um arquivo vazio\n"
+                + "  - echo [texto] > [arquivo]: Escreve texto em um arquivo\n"
+                + "  - cat [arquivo]: Exibe o conteúdo de um arquivo\n"
+                + "  - rm [arquivo]: Remove um arquivo ou diretório\n"
+                + "  - ls: Lista arquivos e diretórios\n"
+                + "  - cd [dir]: Muda para o diretório especificado\n"
+                + "  - find [dir] -name [nome]: Busca arquivos por nome\n"
+                + "  - grep [termo] [arquivo]: Procura por um termo dentro de um arquivo\n"
+                + "  - chmod [permissão] [arquivo]: Modifica permissões de um arquivo (simulado)\n"
+                + "  - chown [dono] [arquivo]: Modifica o dono de um arquivo (simulado)\n"
+                + "  - stat [arquivo]: Exibe informações detalhadas sobre um arquivo\n"
+                + "  - du [diretório]: Exibe o tamanho total de um diretório\n"
+                + "  - cp [origem] [destino]: Copia arquivos ou diretórios\n"
+                + "  - mv [origem] [destino]: Move arquivos ou diretórios\n"
+                + "  - diff [arquivo1] [arquivo2]: Compara dois arquivos e exibe as diferenças\n"
+                + "  - zip [arquivo.zip] [itens]: Realiza a compactação de arquivos\n"
+                + "  - unzip [arquivo.zip]: Realiza a extração de um arquivo ZIP\n"
+                + "  - history: Exibe o histórico de comandos digitados\n"
+                + "  - exit: Encerra a sessão do terminal e reseta os dados\n";
+    }
+    
 }
