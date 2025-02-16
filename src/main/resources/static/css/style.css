@@ -18,22 +18,30 @@ body {
     border-radius: 8px 8px 0 0;
     padding-left: 10px;
   }
+
+  .prompt {
+    flex-shrink: 0; /* 🔥 Garante que o prompt não encolha nem quebre de linha */
+  }
+
   .cmd-input {
     background: transparent;
     border: none;
     color: white;
     font-size: 14px;
     font-family: Menlo, Monaco, "Consolas", "Courier New", "Courier";
-    width: 100%;
+    width: auto; /* 🔥 Deixa o input ocupar apenas o necessário */
     outline: none;
-    caret-color: white; /* Cor do cursor */
+    caret-color: white;
+    flex-grow: 1; /* 🔥 Faz o input expandir sem quebrar a linha */
+    min-width: 1px; /* 🔥 Evita que o input quebre quando vazio */
 }
 
 .input-line {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
+  display: flex;
+  align-items: center;
+  gap: 5px; /* Mantém o espaço pequeno entre prompt e input */
+  white-space: nowrap; /* 🔥 Impede quebra de linha automática */
+  }
 
 .terminal {
     display: flex;
@@ -41,12 +49,12 @@ body {
     gap: 5px;
     overflow-y: auto;
     max-height: 600px;
-}
+  }
 
 .history {
     white-space: pre-wrap;
     font-size: 14px;
-}
+  }
   
   .terminal-window header .button {
     width: 12px;
