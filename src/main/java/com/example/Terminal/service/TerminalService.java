@@ -101,6 +101,12 @@ public class TerminalService {
             // Extras
             case "history":
                 return history();
+            case "help":
+                return getHelpMessage();
+
+            case "exit":
+                resetTerminal();
+                return "exit: Terminal encerrado. Inicie uma nova sessão.";
             
             default:
                 return "zsh: command not found: " + command;
