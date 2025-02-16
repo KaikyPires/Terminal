@@ -23,7 +23,7 @@ public class TerminalService {
 
     public String executeCommand(String command) {
         commandHistory.add(command);
-
+        
         if (command.startsWith("echo ")) {
             return echo(command.substring(5));
         }
@@ -34,38 +34,59 @@ public class TerminalService {
         String arg2 = (parts.length > 2) ? parts[2] : "";
 
         switch (cmd) {
-            case "pwd":
-                return getCurrentPath();
+            // Criação e Manipulação de Diretórios
             case "mkdir":
                 return !arg1.isEmpty() ? mkdir(arg1) : "mkdir: missing operand";
             case "rmdir":
                 return !arg1.isEmpty() ? rmdir(arg1) : "rmdir: missing operand";
-                case "tree":
-                return printTree(currentDirectory, "");            
+            case "tree":
+                return printTree(currentDirectory, "");
             case "rename":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? rename(arg1, arg2) : "rename: missing operands";
+            
+            // Criação e Manipulação de Arquivos
             case "touch":
                 return !arg1.isEmpty() ? touch(arg1) : "touch: missing operand";
+            case "echo":
+                return echo(command.substring(5));
             case "cat":
                 return !arg1.isEmpty() ? cat(arg1) : "cat: missing operand";
             case "rm":
                 return !arg1.isEmpty() ? rm(arg1) : "rm: missing operand";
-            case "ls":
-                return ls(arg1.equals("-l"));
+            case "head":
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2)) : "head: missing operands";
+            case "tail":
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2)) : "tail: missing operands";
+            case "wc":
+                return !arg1.isEmpty() ? wc(arg1) : "wc: missing operand";
+            
+            // Navegação entre Diretórios
             case "cd":
                 return !arg1.isEmpty() ? cd(arg1) : "cd: missing operand";
+            case "pwd":
+                return getCurrentPath();
+            
+            // Busca e Filtragem
             case "find":
                 return (parts.length > 2 && parts[1].equals("-name")) ? find(parts[2]) : "find: invalid syntax";
             case "grep":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? grep(arg1, arg2) : "grep: missing operands";
+            
+            // Permissões e Propriedades (Simuladas)
             case "chmod":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? chmod(arg1, arg2) : "chmod: missing operands";
             case "chown":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? chown(arg1, arg2) : "chown: missing operands";
+            case "ls":
+                return ls(arg1.equals("-l"));
+            
+            // Informações sobre Arquivos e Diretórios
             case "stat":
                 return !arg1.isEmpty() ? stat(arg1) : "stat: missing operand";
             case "du":
                 return !arg1.isEmpty() ? du(arg1) : "du: missing operand";
+            
+            // Operações Avançadas
             case "cp":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? cp(arg1, arg2) : "cp: missing operands";
             case "mv":
@@ -73,40 +94,18 @@ public class TerminalService {
             case "diff":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? diff(arg1, arg2) : "diff: missing operands";
             case "zip":
-                if (parts.length > 2) {
-                    // Verifica se todos os arquivos estão entre aspas
-                    for (int i = 2; i < parts.length; i++) {
-                        if (!parts[i].startsWith("\"") || !parts[i].endsWith("\"")) {
-                            return "Erro: Todos os arquivos devem estar entre aspas.";
-                        }
-                    }
-                    return zip(Arrays.copyOfRange(parts, 1, parts.length));
-                }
-                return "zip: missing operand";
-
+                return (parts.length > 2) ? zip(Arrays.copyOfRange(parts, 1, parts.length)) : "zip: missing operand";
             case "unzip":
                 return !arg1.isEmpty() ? unzip(arg1) : "unzip: missing operand";
+            
+            // Extras
             case "history":
                 return history();
-            case "tail":
-                return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2))
-                        : "tail: missing operands";
-            case "wc":
-                return !arg1.isEmpty() ? wc(arg1) : "wc: missing operand";
-            case "head":
-                return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2))
-                        : "head: missing operands";
-            case "help":
-                return getHelpMessage();
-
-            case "exit":
-                resetTerminal();
-                return "exit: Terminal encerrado. Inicie uma nova sessão.";
+            
             default:
                 return "zsh: command not found: " + command;
         }
     }
-
     public String getCurrentPath() {
         StringBuilder path = new StringBuilder();
         Directory temp = currentDirectory;
@@ -117,6 +116,10 @@ public class TerminalService {
         return path.toString().replaceFirst("/~", "~");
     }
 
+
+
+
+
     // ✅ mkdir: Criar diretórios
     private String mkdir(String name) {
         if (currentDirectory.findSubdirectory(name).isPresent()) {
@@ -124,6 +127,19 @@ public class TerminalService {
         }
         currentDirectory.addDirectory(new Directory(name, currentDirectory));
         return "";
+    }
+    private String rename(String oldName, String newName) {
+        Optional<Directory> dir = currentDirectory.findSubdirectory(oldName);
+        if (dir.isPresent()) {
+            dir.get().setName(newName);
+            return "";
+        }
+        Optional<File> file = currentDirectory.findFile(oldName);
+        if (file.isPresent()) {
+            file.get().setName(newName);
+            return "";
+        }
+        return "rename: no such file or directory: " + oldName;
     }
 
     // ✅ rmdir: Remover diretórios vazios
@@ -409,20 +425,7 @@ public class TerminalService {
     
 
     // ✅ rename: Renomeia um arquivo ou diretório
-    private String rename(String oldName, String newName) {
-        Optional<Directory> dir = currentDirectory.findSubdirectory(oldName);
-        if (dir.isPresent()) {
-            dir.get().setName(newName);
-            return "";
-        }
-        Optional<File> file = currentDirectory.findFile(oldName);
-        if (file.isPresent()) {
-            file.get().setName(newName);
-            return "";
-        }
-        return "rename: no such file or directory: " + oldName;
-    }
-
+    
     private String head(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
 
