@@ -1,7 +1,12 @@
 document.addEventListener("DOMContentLoaded", async function () {
     const terminalHistory = document.querySelector(".history");
     const apiUrl = "http://localhost:8080/api/terminal/execute";
-
+    const commandList = [
+        "pwd", "mkdir", "rmdir", "tree", "rename", "touch", "cat",
+        "rm", "ls", "cd", "find", "grep", "chmod", "chown", "stat",
+        "du", "cp", "mv", "diff", "zip", "unzip", "history", "tail",
+        "wc", "head", "help", "exit","echo"
+    ];
     // 🔥 Criar o primeiro prompt assim que a página carregar
     createNewPrompt();
 
@@ -27,7 +32,12 @@ document.addEventListener("DOMContentLoaded", async function () {
                 focusInput();
             }
         }
+        if (event.key === "Tab") {
+            event.preventDefault();
+            autocompleteCommand(terminalInput);
+        }
     });
+    
 
     async function processCommand(command) {
         if (command === "clear") {
@@ -102,5 +112,36 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     function getCurrentPrompt() {
         return "user@terminal:~$"; // Ajuste conforme necessário
+    }
+
+    function autocompleteCommand(inputElement) {
+        const typedText = inputElement.value.trim().toLowerCase();
+        if (!typedText) return;
+
+        const matchingCommands = commandList.filter(cmd => cmd.startsWith(typedText));
+
+        if (matchingCommands.length === 1) {
+            inputElement.value = matchingCommands[0]; 
+            updateSuggestion(inputElement);
+        }
+    }
+
+    function updateSuggestion(inputElement) {
+        const typedText = inputElement.value.trim().toLowerCase();
+        const suggestionElement = inputElement.parentElement.querySelector(".autocomplete-suggestion");
+
+        if (!typedText) {
+            suggestionElement.textContent = "";
+            return;
+        }
+
+        const matchingCommands = commandList.filter(cmd => cmd.startsWith(typedText));
+
+        if (matchingCommands.length > 0) {
+            const suggestionText = matchingCommands[0].substring(typedText.length);
+            suggestionElement.textContent = suggestionText;
+        } else {
+            suggestionElement.textContent = "";
+        }
     }
 });
