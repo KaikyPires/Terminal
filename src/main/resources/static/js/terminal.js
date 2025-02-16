@@ -1,12 +1,16 @@
-document.addEventListener("DOMContentLoaded", async function () {
+document.addEventListener("DOMContentLoaded", async function () { 
     const terminalHistory = document.querySelector(".history");
     const apiUrl = "http://localhost:8080/api/terminal/execute";
     const commandList = [
         "pwd", "mkdir", "rmdir", "tree", "rename", "touch", "cat",
         "rm", "ls", "cd", "find", "grep", "chmod", "chown", "stat",
         "du", "cp", "mv", "diff", "zip", "unzip", "history", "tail",
-        "wc", "head", "help", "exit","echo"
+        "wc", "head", "help", "exit", "echo"
     ];
+
+    let commandHistory = [];  // Histórico de comandos
+    let historyIndex = -1;  // Índice do histórico
+
     // 🔥 Criar o primeiro prompt assim que a página carregar
     createNewPrompt();
 
@@ -21,23 +25,45 @@ document.addEventListener("DOMContentLoaded", async function () {
         const terminalInput = document.querySelector(".cmd-input");
         if (!terminalInput) return;
 
+        // Permite navegar no histórico de comandos com ↑ e ↓
+        if (event.key === "ArrowUp") {
+            event.preventDefault();
+            if (historyIndex > 0) {
+                historyIndex--;
+                terminalInput.value = commandHistory[historyIndex];
+            }
+        }
+
+        if (event.key === "ArrowDown") {
+            event.preventDefault();
+            if (historyIndex < commandHistory.length - 1) {
+                historyIndex++;
+                terminalInput.value = commandHistory[historyIndex];
+            } else {
+                historyIndex = commandHistory.length;
+                terminalInput.value = "";
+            }
+        }
+
         if (event.key === "Enter") {
             event.preventDefault();
             const command = terminalInput.value.trim();
 
             if (command !== "") {
                 terminalInput.disabled = true; // Impede edição do input antigo
+                commandHistory.push(command); // Salva no histórico
+                historyIndex = commandHistory.length; // Atualiza índice
                 processCommand(command);
             } else {
                 focusInput();
             }
         }
+
         if (event.key === "Tab") {
             event.preventDefault();
             autocompleteCommand(terminalInput);
         }
     });
-    
 
     async function processCommand(command) {
         if (command === "clear") {
