@@ -141,9 +141,6 @@ document.addEventListener("DOMContentLoaded", async function () {
         }, 10);
     }
 
-    function getCurrentPrompt() {
-        return "user@terminal:~$"; // Ajuste conforme necessário
-    }
     async function updatePrompt() {
         try {
             const response = await fetch("http://localhost:8080/api/terminal/current-path");
