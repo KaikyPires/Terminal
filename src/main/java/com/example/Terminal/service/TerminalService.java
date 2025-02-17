@@ -11,19 +11,25 @@ import java.util.stream.Collectors;
 
 @Service
 public class TerminalService {
+    // Diretório raiz do sistema de arquivos
     private final Directory root;
+    // Diretório atual do terminal
     private Directory currentDirectory;
+    // ArrayList para armazenar o histórico de comandos
     private final List<String> commandHistory = new ArrayList<>();
+    // HashMap para armazenar as permissões dos arquivos (simulado)
     private final Map<String, String> permissions = new HashMap<>();
 
+    // Construtor
     public TerminalService() {
         this.root = new Directory("~", null);
         this.currentDirectory = root;
     }
 
+    // Método para executar comandos
     public String executeCommand(String command) {
         commandHistory.add(command);
-        
+
         if (command.startsWith("echo ")) {
             return echo(command.substring(5));
         }
@@ -43,7 +49,7 @@ public class TerminalService {
                 return printTree(currentDirectory, "");
             case "rename":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? rename(arg1, arg2) : "rename: missing operands";
-            
+
             // Criação e Manipulação de Arquivos
             case "touch":
                 return !arg1.isEmpty() ? touch(arg1) : "touch: missing operand";
@@ -54,24 +60,26 @@ public class TerminalService {
             case "rm":
                 return !arg1.isEmpty() ? rm(arg1) : "rm: missing operand";
             case "head":
-                return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2)) : "head: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? head(arg1, Integer.parseInt(arg2))
+                        : "head: missing operands";
             case "tail":
-                return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2)) : "tail: missing operands";
+                return (!arg1.isEmpty() && !arg2.isEmpty()) ? tail(arg1, Integer.parseInt(arg2))
+                        : "tail: missing operands";
             case "wc":
                 return !arg1.isEmpty() ? wc(arg1) : "wc: missing operand";
-            
+
             // Navegação entre Diretórios
             case "cd":
                 return !arg1.isEmpty() ? cd(arg1) : "cd: missing operand";
             case "pwd":
                 return getCurrentPath();
-            
+
             // Busca e Filtragem
             case "find":
                 return (parts.length > 2 && parts[1].equals("-name")) ? find(parts[2]) : "find: invalid syntax";
             case "grep":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? grep(arg1, arg2) : "grep: missing operands";
-            
+
             // Permissões e Propriedades (Simuladas)
             case "chmod":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? chmod(arg1, arg2) : "chmod: missing operands";
@@ -79,13 +87,13 @@ public class TerminalService {
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? chown(arg1, arg2) : "chown: missing operands";
             case "ls":
                 return ls(arg1.equals("-l"));
-            
+
             // Informações sobre Arquivos e Diretórios
             case "stat":
                 return !arg1.isEmpty() ? stat(arg1) : "stat: missing operand";
             case "du":
                 return !arg1.isEmpty() ? du(arg1) : "du: missing operand";
-            
+
             // Operações Avançadas
             case "cp":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? cp(arg1, arg2) : "cp: missing operands";
@@ -97,7 +105,7 @@ public class TerminalService {
                 return (parts.length > 2) ? zip(Arrays.copyOfRange(parts, 1, parts.length)) : "zip: missing operand";
             case "unzip":
                 return !arg1.isEmpty() ? unzip(arg1) : "unzip: missing operand";
-            
+
             // Extras
             case "history":
                 return history();
@@ -107,24 +115,13 @@ public class TerminalService {
             case "exit":
                 resetTerminal();
                 return "exit: Terminal encerrado. Inicie uma nova sessão.";
-            
+
             default:
                 return "zsh: command not found: " + command;
         }
     }
-    public String getCurrentPath() {
-        StringBuilder path = new StringBuilder();
-        Directory temp = currentDirectory;
-        while (temp != null) {
-            path.insert(0, "/" + temp.getName());
-            temp = temp.getParent();
-        }
-        return path.toString().replaceFirst("/~", "~");
-    }
 
-
-
-
+    // Criação e Manipulação de Diretórios:
 
     // ✅ mkdir: Criar diretórios
     private String mkdir(String name) {
@@ -134,6 +131,49 @@ public class TerminalService {
         currentDirectory.addDirectory(new Directory(name, currentDirectory));
         return "";
     }
+
+    // ✅ rmdir: Remover diretórios vazios
+    private String rmdir(String name) {
+        Optional<Directory> dir = currentDirectory.findSubdirectory(name);
+        if (dir.isPresent() && dir.get().getSubdirectories().isEmpty() && dir.get().getFiles().isEmpty()) {
+            currentDirectory.getSubdirectories().remove(dir.get());
+            return "";
+        }
+        return "rmdir: failed to remove '" + name + "': Directory not empty or does not exist";
+    }
+
+    // ✅ tree: Exibe estrutura de diretórios
+    private String printTree(Directory dir, String prefix) {
+        StringBuilder result = new StringBuilder();
+
+        List<Directory> subdirs = dir.getSubdirectories();
+        List<File> files = dir.getFiles();
+        int totalItems = subdirs.size() + files.size();
+
+        int index = 0;
+        for (Directory subdir : subdirs) {
+            boolean isLast = (index == totalItems - 1);
+            result.append(prefix)
+                    .append(isLast ? "└── " : "├── ")
+                    .append(subdir.getName())
+                    .append("\n");
+            result.append(printTree(subdir, prefix + (isLast ? "    " : "│   ")));
+            index++;
+        }
+
+        for (File file : files) {
+            boolean isLast = (index == totalItems - 1);
+            result.append(prefix)
+                    .append(isLast ? "└── " : "├── ")
+                    .append(file.getName())
+                    .append("\n");
+            index++;
+        }
+
+        return result.toString();
+    }
+
+    // ✅ rename: Renomeia um arquivo ou diretório
     private String rename(String oldName, String newName) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(oldName);
         if (dir.isPresent()) {
@@ -148,15 +188,7 @@ public class TerminalService {
         return "rename: no such file or directory: " + oldName;
     }
 
-    // ✅ rmdir: Remover diretórios vazios
-    private String rmdir(String name) {
-        Optional<Directory> dir = currentDirectory.findSubdirectory(name);
-        if (dir.isPresent() && dir.get().getSubdirectories().isEmpty() && dir.get().getFiles().isEmpty()) {
-            currentDirectory.getSubdirectories().remove(dir.get());
-            return "";
-        }
-        return "rmdir: failed to remove '" + name + "': Directory not empty or does not exist";
-    }
+    // Criação e Manipulação de Arquivos:
 
     // ✅ touch: Criar arquivos vazios
     private String touch(String name) {
@@ -230,6 +262,7 @@ public class TerminalService {
         return "cat: " + fileName + ": No such file or directory";
     }
 
+    // ✅ rm: Remover arquivos e diretórios
     private String rm(String name) {
         Optional<File> file = currentDirectory.findFile(name);
         if (file.isPresent()) {
@@ -244,57 +277,55 @@ public class TerminalService {
         return "rm: cannot remove '" + name + "': No such file or directory";
     }
 
-    private String ls(boolean isDetailed) {
-        StringBuilder output = new StringBuilder();
+    // ✅ head: Exibir as primeiras N linhas de um arquivo
+    private String head(String fileName, int n) {
+        Optional<File> file = currentDirectory.findFile(fileName);
 
-        // 🔥 Obtém o formato de data para simular `ls -l`
-        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM dd HH:mm");
-
-        // 🔥 Obtém os itens e os ordena corretamente
-        List<Directory> dirs = currentDirectory.getSubdirectories().stream()
-                .sorted(Comparator.comparing(Directory::getName))
-                .toList();
-
-        List<File> files = currentDirectory.getFiles().stream()
-                .sorted(Comparator.comparing(File::getName))
-                .toList();
-
-        if (isDetailed) {
-            // 🔹 `ls -l`: Exibe informações detalhadas (permissões, dono, grupo, tamanho, data, nome)
-            for (Directory dir : dirs) {
-                String formattedDate = LocalDateTime.now().format(dateFormat);
-                output.append(String.format("drwxr-xr-x  user  root  4096  %s  %s/\n", formattedDate, dir.getName()));
-            }
-            for (File file : files) {
-                String permission = permissions.getOrDefault(file.getName(), "-rw-r--r--");
-                int size = file.getContent().length();
-                String formattedDate = LocalDateTime.now().format(dateFormat);
-                output.append(String.format("%s  user  root  %4d  %s  %s\n", permission, size, formattedDate,
-                        file.getName()));
-            }
-        } else {
-            // 🔹 `ls`: Exibe os arquivos e diretórios em colunas, organizados
-            List<String> items = new ArrayList<>();
-            for (Directory dir : dirs)
-                items.add(dir.getName() + "/");
-            for (File file : files)
-                items.add(file.getName());
-
-            int colWidth = 15; // Largura da coluna
-            int numCols = 4; // Número de colunas exibidas antes da quebra de linha
-            int index = 0;
-
-            for (String item : items) {
-                output.append(String.format("%-" + colWidth + "s", item));
-                index++;
-                if (index % numCols == 0)
-                    output.append("\n"); // Quebra de linha a cada 4 itens
-            }
+        if (file.isEmpty()) {
+            return "head: " + fileName + ": No such file or directory";
         }
 
-        return output.toString().trim();
+        List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
+        int endIndex = Math.min(n, lines.size()); // Pegando as primeiras N linhas
+
+        // Remover aspas extras nas linhas antes de retornar
+        return lines.subList(0, endIndex).stream()
+                .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
+                .collect(Collectors.joining("\n"));
     }
 
+    // ✅ tail: Exibir as últimas N linhas de um arquivo
+    private String tail(String fileName, int n) {
+        Optional<File> file = currentDirectory.findFile(fileName);
+
+        if (file.isEmpty()) {
+            return "tail: " + fileName + ": No such file or directory";
+        }
+
+        List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
+        int startIndex = Math.max(0, lines.size() - n); // Pegando as últimas N linhas
+
+        // Remover aspas extras nas linhas antes de retornar
+        return lines.subList(startIndex, lines.size()).stream()
+                .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
+                .collect(Collectors.joining("\n"));
+    }
+
+    // ✅ wc: Contar linhas, palavras e caracteres de um arquivo
+    private String wc(String fileName) {
+        Optional<File> file = currentDirectory.findFile(fileName);
+        return file.map(f -> {
+            String content = f.getContent();
+            long lines = content.lines().count();
+            long words = Arrays.stream(content.split("\\s+")).count();
+            long chars = content.length();
+            return lines + " " + words + " " + chars + " " + fileName;
+        }).orElse("wc: " + fileName + ": No such file or directory");
+    }
+
+    // Navegação entre Diretórios:
+
+    // ✅ cd: Navegar entre diretórios
     private String cd(String name) {
         if (name.equals("/")) {
             currentDirectory = root; // Volta para o diretório raiz (~)
@@ -316,6 +347,19 @@ public class TerminalService {
 
         return "cd: no such file or directory: " + name;
     }
+
+    // ✅ pwd: Exibir o caminho atual do diretório
+    public String getCurrentPath() {
+        StringBuilder path = new StringBuilder();
+        Directory temp = currentDirectory;
+        while (temp != null) {
+            path.insert(0, "/" + temp.getName());
+            temp = temp.getParent();
+        }
+        return path.toString().replaceFirst("/~", "~");
+    }
+
+    // Busca e Filtragem:
 
     // ✅ find: Procurar arquivos e diretórios
     private String find(String name) {
@@ -358,6 +402,8 @@ public class TerminalService {
                 : String.join("\n", matchingLines);
     }
 
+    // Permissões e Propriedades (Simuladas):
+
     // ✅ chmod: Alterar permissões simuladas
     private String chmod(String permission, String name) {
         Optional<File> file = currentDirectory.findFile(name);
@@ -389,91 +435,60 @@ public class TerminalService {
         return "chown: cannot access '" + name + "': No such file or directory";
     }
 
-    // ✅ history: Exibir histórico de comandos
-    private String history() {
-        return String.join("\n", commandHistory);
-    }
+    // ✅ ls -l: Listar conteúdo do diretório com detalhes
+    private String ls(boolean isDetailed) {
+        StringBuilder output = new StringBuilder();
 
-    public String getPrompt() {
-        return getCurrentPath();
-    }
+        // 🔥 Obtém o formato de data para simular `ls -l`
+        DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM dd HH:mm");
 
-    // ✅ tree: Exibe estrutura de diretórios
-    private String printTree(Directory dir, String prefix) {
-        StringBuilder result = new StringBuilder();
-        
-        List<Directory> subdirs = dir.getSubdirectories();
-        List<File> files = dir.getFiles();
-        int totalItems = subdirs.size() + files.size();
-        
-        int index = 0;
-        for (Directory subdir : subdirs) {
-            boolean isLast = (index == totalItems - 1);
-            result.append(prefix)
-                  .append(isLast ? "└── " : "├── ")
-                  .append(subdir.getName())
-                  .append("\n");
-            result.append(printTree(subdir, prefix + (isLast ? "    " : "│   ")));
-            index++;
-        }
-    
-        for (File file : files) {
-            boolean isLast = (index == totalItems - 1);
-            result.append(prefix)
-                  .append(isLast ? "└── " : "├── ")
-                  .append(file.getName())
-                  .append("\n");
-            index++;
-        }
-    
-        return result.toString();
-    }
-    
+        // 🔥 Obtém os itens e os ordena corretamente
+        List<Directory> dirs = currentDirectory.getSubdirectories().stream()
+                .sorted(Comparator.comparing(Directory::getName))
+                .toList();
 
-    // ✅ rename: Renomeia um arquivo ou diretório
-    
-    private String head(String fileName, int n) {
-        Optional<File> file = currentDirectory.findFile(fileName);
+        List<File> files = currentDirectory.getFiles().stream()
+                .sorted(Comparator.comparing(File::getName))
+                .toList();
 
-        if (file.isEmpty()) {
-            return "head: " + fileName + ": No such file or directory";
-        }
+        if (isDetailed) {
+            // 🔹 `ls -l`: Exibe informações detalhadas (permissões, dono, grupo, tamanho,
+            // data, nome)
+            for (Directory dir : dirs) {
+                String formattedDate = LocalDateTime.now().format(dateFormat);
+                output.append(String.format("drwxr-xr-x  user  root  4096  %s  %s/\n", formattedDate, dir.getName()));
+            }
+            for (File file : files) {
+                String permission = permissions.getOrDefault(file.getName(), "-rw-r--r--");
+                int size = file.getContent().length();
+                String formattedDate = LocalDateTime.now().format(dateFormat);
+                output.append(String.format("%s  user  root  %4d  %s  %s\n", permission, size, formattedDate,
+                        file.getName()));
+            }
+        } else {
+            // 🔹 `ls`: Exibe os arquivos e diretórios em colunas, organizados
+            List<String> items = new ArrayList<>();
+            for (Directory dir : dirs)
+                items.add(dir.getName() + "/");
+            for (File file : files)
+                items.add(file.getName());
 
-        List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
-        int endIndex = Math.min(n, lines.size()); // Pegando as primeiras N linhas
+            int colWidth = 15; // Largura da coluna
+            int numCols = 4; // Número de colunas exibidas antes da quebra de linha
+            int index = 0;
 
-        // Remover aspas extras nas linhas antes de retornar
-        return lines.subList(0, endIndex).stream()
-                .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
-                .collect(Collectors.joining("\n"));
-    }
-
-    private String tail(String fileName, int n) {
-        Optional<File> file = currentDirectory.findFile(fileName);
-
-        if (file.isEmpty()) {
-            return "tail: " + fileName + ": No such file or directory";
+            for (String item : items) {
+                output.append(String.format("%-" + colWidth + "s", item));
+                index++;
+                if (index % numCols == 0)
+                    output.append("\n"); // Quebra de linha a cada 4 itens
+            }
         }
 
-        List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
-        int startIndex = Math.max(0, lines.size() - n); // Pegando as últimas N linhas
-
-        // Remover aspas extras nas linhas antes de retornar
-        return lines.subList(startIndex, lines.size()).stream()
-                .map(line -> line.replaceAll("^\"|\"$", "")) // Remove aspas extras
-                .collect(Collectors.joining("\n"));
+        return output.toString().trim();
     }
 
-    private String wc(String fileName) {
-        Optional<File> file = currentDirectory.findFile(fileName);
-        return file.map(f -> {
-            String content = f.getContent();
-            long lines = content.lines().count();
-            long words = Arrays.stream(content.split("\\s+")).count();
-            long chars = content.length();
-            return lines + " " + words + " " + chars + " " + fileName;
-        }).orElse("wc: " + fileName + ": No such file or directory");
-    }
+    // Informações sobre Arquivos e Diretórios:
 
     // ✅ stat: Exibe detalhes de um arquivo ou diretório
     private String stat(String name) {
@@ -507,25 +522,7 @@ public class TerminalService {
         return "Directory size: " + totalSize + " bytes";
     }
 
-    // 🔥 Função auxiliar para calcular o tamanho total do diretório e seus arquivos
-    private int calculateDirectorySize(Directory dir) {
-        int size = 0;
-
-        System.out.println("DEBUG: Verificando arquivos dentro do diretório '" + dir.getName() + "'");
-
-        for (File file : dir.getFiles()) {
-            int fileSize = file.getContent().length();
-            System.out.println("DEBUG: Arquivo '" + file.getName() + "' tamanho: " + fileSize + " bytes");
-            size += fileSize;
-        }
-
-        for (Directory subdir : dir.getSubdirectories()) {
-            size += calculateDirectorySize(subdir);
-        }
-
-        System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size + " bytes");
-        return size;
-    }
+    // Operações Avançadas:
 
     // ✅ cp: Copia arquivos ou diretórios
     private String cp(String source, String destination) {
@@ -563,6 +560,7 @@ public class TerminalService {
         return "cp: cannot copy '" + source + "': No such file or directory";
     }
 
+    // ✅ mv: Mover arquivos ou diretórios
     private String mv(String source, String destination) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(source);
         Optional<File> file = currentDirectory.findFile(source);
@@ -607,6 +605,7 @@ public class TerminalService {
         return "diff: One or both files do not exist";
     }
 
+    // ✅ zip: Recebe um nome de arquivo ZIP e uma lista de arquivos para compactar
     private String zip(String[] args) {
         System.out.println("DEBUG: Comando ZIP chamado com argumentos: " + Arrays.toString(args));
 
@@ -666,6 +665,7 @@ public class TerminalService {
         return "Arquivos compactados em '" + zipName + "'";
     }
 
+    // ✅ unzip: Extrair arquivos de um ZIP
     private String unzip(String zipName) {
         if (!zipName.endsWith(".zip")) {
             zipName += ".zip";
@@ -694,6 +694,14 @@ public class TerminalService {
         return "unzip: " + extractedFiles + " files extracted from " + zipName;
     }
 
+    // Extras:
+
+    // ✅ history: Exibir histórico de comandos
+    private String history() {
+        return String.join("\n", commandHistory);
+    }
+
+    // ✅ exit: Encerrar a sessão do terminal e resetar os dados
     private void resetTerminal() {
         System.out.println("DEBUG: Resetando terminal...");
 
@@ -710,6 +718,28 @@ public class TerminalService {
         System.out.println("DEBUG: Terminal resetado.");
     }
 
+    // Métodos Auxiliares:
+    // ✅ calculateDirectorySize: Calcular o tamanho de um diretório
+    private int calculateDirectorySize(Directory dir) {
+        int size = 0;
+
+        System.out.println("DEBUG: Verificando arquivos dentro do diretório '" + dir.getName() + "'");
+
+        for (File file : dir.getFiles()) {
+            int fileSize = file.getContent().length();
+            System.out.println("DEBUG: Arquivo '" + file.getName() + "' tamanho: " + fileSize + " bytes");
+            size += fileSize;
+        }
+
+        for (Directory subdir : dir.getSubdirectories()) {
+            size += calculateDirectorySize(subdir);
+        }
+
+        System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size + " bytes");
+        return size;
+    }
+
+    // ✅ getHelpMessage: Obter mensagem de ajuda
     private String getHelpMessage() {
         return "Comandos disponíveis:\n"
                 + "  - pwd: Exibe o caminho atual do diretório\n"
