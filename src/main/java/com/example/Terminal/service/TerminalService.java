@@ -439,10 +439,9 @@ public class TerminalService {
     private String ls(boolean isDetailed) {
         StringBuilder output = new StringBuilder();
 
-        // 🔥 Obtém o formato de data para simular `ls -l`
         DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM dd HH:mm");
 
-        // 🔥 Obtém os itens e os ordena corretamente
+    
         List<Directory> dirs = currentDirectory.getSubdirectories().stream()
                 .sorted(Comparator.comparing(Directory::getName))
                 .toList();
@@ -452,8 +451,7 @@ public class TerminalService {
                 .toList();
 
         if (isDetailed) {
-            // 🔹 `ls -l`: Exibe informações detalhadas (permissões, dono, grupo, tamanho,
-            // data, nome)
+ 
             for (Directory dir : dirs) {
                 String formattedDate = LocalDateTime.now().format(dateFormat);
                 output.append(String.format("drwxr-xr-x  user  root  4096  %s  %s/\n", formattedDate, dir.getName()));
@@ -466,7 +464,7 @@ public class TerminalService {
                         file.getName()));
             }
         } else {
-            // 🔹 `ls`: Exibe os arquivos e diretórios em colunas, organizados
+ 
             List<String> items = new ArrayList<>();
             for (Directory dir : dirs)
                 items.add(dir.getName() + "/");
@@ -624,7 +622,6 @@ public class TerminalService {
         boolean hasValidFiles = false;
         List<String> arquivosParaCompactar = new ArrayList<>();
 
-        // 🔥 Garantindo que os arquivos sejam corretamente separados e sem aspas extras
         for (int i = 1; i < args.length; i++) {
             String[] arquivosSeparados = args[i].split("\\s+"); // Divide corretamente caso args[i] esteja concatenado
             for (String file : arquivosSeparados) {
