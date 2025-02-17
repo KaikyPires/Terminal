@@ -65,7 +65,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
 
     async function processCommand(command) {
-        if (command === "clear") {
+        if (command === "cls") {
             terminalHistory.innerHTML = "";
             createNewPrompt(); // Garante que o prompt aparece após limpar
             return;
