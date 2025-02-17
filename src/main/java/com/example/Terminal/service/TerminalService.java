@@ -76,7 +76,11 @@ public class TerminalService {
 
             // Busca e Filtragem
             case "find":
-                return (parts.length > 2 && parts[1].equals("-name")) ? find(parts[2]) : "find: invalid syntax";
+                if (parts.length < 3 || !parts[1].equals("-name")) {
+                    return "find: invalid syntax. Uso correto: find <diretorio> -name <arquivo>";
+                }
+                return find(parts[0], parts[2]);
+
             case "grep":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? grep(arg1, arg2) : "grep: missing operands";
 
@@ -123,26 +127,35 @@ public class TerminalService {
 
     // Criação e Manipulação de Diretórios:
 
-    // ✅ mkdir: Criar diretórios
-    private String mkdir(String name) {
-        if (currentDirectory.findSubdirectory(name).isPresent()) {
-            return "mkdir: cannot create directory '" + name + "': File exists";
+    // mkdir: Criar diretórios
+    private String mkdir(String path) {
+        String[] parts = path.split("/");
+        Directory parent = currentDirectory;
+
+        for (String part : parts) {
+            Optional<Directory> existingDir = parent.findSubdirectory(part);
+            if (existingDir.isPresent()) {
+                parent = existingDir.get(); // Avança para o subdiretório existente
+            } else {
+                Directory newDir = new Directory(part, parent);
+                parent.addDirectory(newDir);
+                parent = newDir; // Continua para o próximo nível
+            }
         }
-        currentDirectory.addDirectory(new Directory(name, currentDirectory));
         return "";
     }
 
-    // ✅ rmdir: Remover diretórios vazios
+    // rmdir: Remover diretórios vazios
     private String rmdir(String name) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
         if (dir.isPresent() && dir.get().getSubdirectories().isEmpty() && dir.get().getFiles().isEmpty()) {
             currentDirectory.getSubdirectories().remove(dir.get());
             return "";
         }
-        return "rmdir: failed to remove '" + name + "': Directory not empty or does not exist";
+        return "rmdir: Falha ao remover '" + name + "': directorio não esta vazio ou não existe";
     }
 
-    // ✅ tree: Exibe estrutura de diretórios
+    // tree: Exibe estrutura de diretórios
     private String printTree(Directory dir, String prefix) {
         StringBuilder result = new StringBuilder();
 
@@ -173,7 +186,7 @@ public class TerminalService {
         return result.toString();
     }
 
-    // ✅ rename: Renomeia um arquivo ou diretório
+    // rename: Renomeia um arquivo ou diretório
     private String rename(String oldName, String newName) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(oldName);
         if (dir.isPresent()) {
@@ -185,12 +198,12 @@ public class TerminalService {
             file.get().setName(newName);
             return "";
         }
-        return "rename: no such file or directory: " + oldName;
+        return "rename: Não existe arquivo ou diretorio: " + oldName;
     }
 
     // Criação e Manipulação de Arquivos:
 
-    // ✅ touch: Criar arquivos vazios
+    // touch: Criar arquivos vazios
     private String touch(String name) {
         if (currentDirectory.findFile(name).isPresent()) {
             return ""; // Arquivo já existe
@@ -199,9 +212,9 @@ public class TerminalService {
         return "";
     }
 
-    // ✅ echo: Adicionar ou sobrescrever texto em arquivos
+    // echo: Adicionar ou sobrescrever texto em arquivos
     private String echo(String command) {
-        command = command.replaceAll("^\"|\"$", ""); // Remove aspas extras
+        command = command.replaceAll("^\"|\"$", ""); // Remove aspas no início e no final
 
         if (command.contains(">>")) {
             String[] parts = command.split(">>", 2);
@@ -212,15 +225,12 @@ public class TerminalService {
 
             Optional<File> file = currentDirectory.findFile(fileName);
             if (file.isPresent()) {
-                file.get().setContent(file.get().getContent() + "\n" + content);
+                file.get().setContent(file.get().getContent().replaceAll("\"$", "") + "\n" + content);
             } else {
                 File newFile = new File(fileName);
                 newFile.setContent(content);
-                currentDirectory.addFile(newFile); // Agora adicionamos o arquivo ao diretório correto
+                currentDirectory.addFile(newFile);
             }
-
-            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '"
-                    + currentDirectory.getName() + "'");
             return "";
         } else if (command.contains(">")) {
             String[] parts = command.split(">", 2);
@@ -235,21 +245,16 @@ public class TerminalService {
             } else {
                 File newFile = new File(fileName);
                 newFile.setContent(content);
-                currentDirectory.addFile(newFile); // Agora adicionamos o arquivo ao diretório correto
+                currentDirectory.addFile(newFile);
             }
-
-            System.out.println("DEBUG: Arquivo '" + fileName + "' criado com conteúdo: " + content + " no diretório '"
-                    + currentDirectory.getName() + "'");
             return "";
         } else {
             return command;
         }
     }
 
-    // ✅ cat: Mostrar conteúdo de arquivos
+    // cat: Mostrar conteúdo de arquivos
     private String cat(String fileName) {
-        System.out.println("DEBUG: Current Directory -> " + currentDirectory.getName());
-        System.out.println("DEBUG: Files in Current Directory -> " + currentDirectory.getFiles());
 
         Optional<File> file = currentDirectory.findFile(fileName);
 
@@ -259,10 +264,10 @@ public class TerminalService {
             return content;
         }
 
-        return "cat: " + fileName + ": No such file or directory";
+        return "cat: " + fileName + ": arquivo não encontrado";
     }
 
-    // ✅ rm: Remover arquivos e diretórios
+    // rm: Remover arquivos e diretórios
     private String rm(String name) {
         Optional<File> file = currentDirectory.findFile(name);
         if (file.isPresent()) {
@@ -274,15 +279,15 @@ public class TerminalService {
             currentDirectory.getSubdirectories().remove(dir.get());
             return "";
         }
-        return "rm: cannot remove '" + name + "': No such file or directory";
+        return "rm: Não foi possível remover '" + name + "': arquivo ou diretório não encontrado";
     }
 
-    // ✅ head: Exibir as primeiras N linhas de um arquivo
+    // head: Exibir as primeiras N linhas de um arquivo
     private String head(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
 
         if (file.isEmpty()) {
-            return "head: " + fileName + ": No such file or directory";
+            return "head: " + fileName + ": arquivo ou diretorio não encontrado";
         }
 
         List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
@@ -294,12 +299,12 @@ public class TerminalService {
                 .collect(Collectors.joining("\n"));
     }
 
-    // ✅ tail: Exibir as últimas N linhas de um arquivo
+    // tail: Exibir as últimas N linhas de um arquivo
     private String tail(String fileName, int n) {
         Optional<File> file = currentDirectory.findFile(fileName);
 
         if (file.isEmpty()) {
-            return "tail: " + fileName + ": No such file or directory";
+            return "tail: " + fileName + ": arquivo ou diretorio não encontrado";
         }
 
         List<String> lines = Arrays.asList(file.get().getContent().split("\n"));
@@ -311,7 +316,7 @@ public class TerminalService {
                 .collect(Collectors.joining("\n"));
     }
 
-    // ✅ wc: Contar linhas, palavras e caracteres de um arquivo
+    // wc: Contar linhas, palavras e caracteres de um arquivo
     private String wc(String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
         return file.map(f -> {
@@ -320,12 +325,12 @@ public class TerminalService {
             long words = Arrays.stream(content.split("\\s+")).count();
             long chars = content.length();
             return lines + " " + words + " " + chars + " " + fileName;
-        }).orElse("wc: " + fileName + ": No such file or directory");
+        }).orElse("wc: " + fileName + ": arquivo ou diretorio não encontrado");
     }
 
     // Navegação entre Diretórios:
 
-    // ✅ cd: Navegar entre diretórios
+    // cd: Navegar entre diretórios
     private String cd(String name) {
         if (name.equals("/")) {
             currentDirectory = root; // Volta para o diretório raiz (~)
@@ -345,10 +350,10 @@ public class TerminalService {
             return "";
         }
 
-        return "cd: no such file or directory: " + name;
+        return "cd\": arquivo ou diretorio não encontrado " + name;
     }
 
-    // ✅ pwd: Exibir o caminho atual do diretório
+    // pwd: Exibir o caminho atual do diretório
     public String getCurrentPath() {
         StringBuilder path = new StringBuilder();
         Directory temp = currentDirectory;
@@ -361,35 +366,75 @@ public class TerminalService {
 
     // Busca e Filtragem:
 
-    // ✅ find: Procurar arquivos e diretórios
-    private String find(String name) {
-        name = name.replaceAll("^\"|\"$", ""); // Remove aspas externas
-        String result = searchRecursively(currentDirectory, name);
-        return result.isEmpty() ? "find: no matches found for '" + name + "'" : result;
+    // find: Procurar arquivos e diretórios
+    private String find(String directoryName, String fileName) {
+        fileName = fileName.replaceAll("^\"|\"$", ""); // Remove aspas extras
+
+        Directory searchDirectory;
+
+        // Se for ".", busca no diretório atual; se for "~", busca na raiz
+        if (directoryName.equals("~") || directoryName.equals(".")) {
+            searchDirectory = root;
+        } else if (directoryName.equals("/")) {
+            searchDirectory = root;
+        } else {
+            Optional<Directory> specifiedDir = findDirectoryRecursive(root, directoryName);
+            if (specifiedDir.isPresent()) {
+                searchDirectory = specifiedDir.get();
+            } else {
+                return "find: diretório não encontrado: " + directoryName;
+            }
+        }
+
+        List<String> results = new ArrayList<>();
+        searchRecursively(searchDirectory, fileName, results, searchDirectory.getName());
+
+        return results.isEmpty() ? "find: Nenhum arquivo correspondente encontrado" : String.join("\n", results);
     }
 
-    private String searchRecursively(Directory dir, String name) {
-        StringBuilder result = new StringBuilder();
-        for (Directory subdir : dir.getSubdirectories()) {
-            if (subdir.getName().equals(name)) {
-                result.append(dir.getName()).append("/").append(subdir.getName()).append("\n");
-            }
-            result.append(searchRecursively(subdir, name));
+    private Optional<Directory> findDirectoryRecursive(Directory dir, String name) {
+        if (dir.getName().equals(name)) {
+            return Optional.of(dir);
         }
+
+        for (Directory subdir : dir.getSubdirectories()) {
+            Optional<Directory> found = findDirectoryRecursive(subdir, name);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+        return Optional.empty();
+    }
+
+    // Método para busca recursiva de arquivos/diretórios
+    private void searchRecursively(Directory dir, String name, List<String> results, String path) {
+        System.out.println("DEBUG: Buscando '" + name + "' no diretório '" + path + "'");
+
+        // Verifica se algum arquivo dentro do diretório corresponde ao nome buscado
         for (File file : dir.getFiles()) {
             if (file.getName().equals(name)) {
-                result.append(dir.getName()).append("/").append(file.getName()).append("\n");
+                results.add(path + "/" + file.getName());
+                System.out.println("DEBUG: Arquivo encontrado -> " + path + "/" + file.getName());
             }
         }
-        return result.toString().isEmpty() ? "find: no matches found for '" + name + "'" : result.toString();
+
+        // Verifica se algum subdiretório corresponde ao nome buscado
+        for (Directory subdir : dir.getSubdirectories()) {
+            String subdirPath = path + "/" + subdir.getName();
+            if (subdir.getName().equals(name)) {
+                results.add(subdirPath);
+                System.out.println("DEBUG: Diretório encontrado -> " + subdirPath);
+            }
+            searchRecursively(subdir, name, results, subdirPath);
+        }
     }
 
-    // ✅ grep: Procurar texto em arquivos
+    // grep: Procurar texto em arquivos
     private String grep(String term, String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
 
         if (file.isEmpty()) {
-            return "grep: " + fileName + ": No such file or directory";
+            return "grep: " + fileName + ": arquivo ou diretorio não encontrado";
         }
 
         final String finalTerm = term.replaceAll("^\"|\"$", ""); // Remove aspas externas
@@ -398,20 +443,20 @@ public class TerminalService {
                 .filter(line -> line.contains(finalTerm))
                 .collect(Collectors.toList());
 
-        return matchingLines.isEmpty() ? "grep: no matches found for '" + finalTerm + "'"
+        return matchingLines.isEmpty() ? "grep: Nenhuma correspondência encontrada para '" + finalTerm + "'"
                 : String.join("\n", matchingLines);
     }
 
     // Permissões e Propriedades (Simuladas):
 
-    // ✅ chmod: Alterar permissões simuladas
+    // chmod: Alterar permissões simuladas
     private String chmod(String permission, String name) {
         Optional<File> file = currentDirectory.findFile(name);
         if (file.isPresent()) {
             permissions.put(name, convertPermission(permission));
             return "";
         }
-        return "chmod: cannot access '" + name + "': No such file or directory";
+        return "chmod: cannot access '" + name + "': arquivo ou diretorio não encontrado";
     }
 
     private String convertPermission(String permission) {
@@ -432,16 +477,15 @@ public class TerminalService {
         if (file.isPresent() || dir.isPresent()) {
             return ""; // Simula sucesso
         }
-        return "chown: cannot access '" + name + "': No such file or directory";
+        return "chown: Acesso não permitido '" + name + "': arquivo ou diretorio não encontrado";
     }
 
-    // ✅ ls -l: Listar conteúdo do diretório com detalhes
+    // ls -l: Listar conteúdo do diretório com detalhes
     private String ls(boolean isDetailed) {
         StringBuilder output = new StringBuilder();
 
         DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM dd HH:mm");
 
-    
         List<Directory> dirs = currentDirectory.getSubdirectories().stream()
                 .sorted(Comparator.comparing(Directory::getName))
                 .toList();
@@ -451,7 +495,7 @@ public class TerminalService {
                 .toList();
 
         if (isDetailed) {
- 
+
             for (Directory dir : dirs) {
                 String formattedDate = LocalDateTime.now().format(dateFormat);
                 output.append(String.format("drwxr-xr-x  user  root  4096  %s  %s/\n", formattedDate, dir.getName()));
@@ -464,7 +508,7 @@ public class TerminalService {
                         file.getName()));
             }
         } else {
- 
+
             List<String> items = new ArrayList<>();
             for (Directory dir : dirs)
                 items.add(dir.getName() + "/");
@@ -488,7 +532,7 @@ public class TerminalService {
 
     // Informações sobre Arquivos e Diretórios:
 
-    // ✅ stat: Exibe detalhes de um arquivo ou diretório
+    // stat: Exibe detalhes de um arquivo ou diretório
     private String stat(String name) {
         Optional<File> file = currentDirectory.findFile(name);
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
@@ -499,10 +543,10 @@ public class TerminalService {
         if (dir.isPresent()) {
             return "Directory: " + name + "\nSubdirectories: " + dir.get().getSubdirectories().size();
         }
-        return "stat: cannot stat '" + name + "': No such file or directory";
+        return "stat: Não foi possível acessar '" + name + "': arquivo ou diretorio não encontrado";
     }
 
-    // ✅ du: Exibe o tamanho do diretório
+    // du: Exibe o tamanho do diretório
     private String du(String name) {
         Directory targetDirectory;
 
@@ -511,18 +555,18 @@ public class TerminalService {
         } else {
             Optional<Directory> dir = currentDirectory.findSubdirectory(name);
             if (dir.isEmpty()) {
-                return "du: cannot access '" + name + "': No such file or directory";
+                return "du: Acesso não permitido '" + name + "': arquivo ou diretorio não encontrado";
             }
             targetDirectory = dir.get();
         }
 
         int totalSize = calculateDirectorySize(targetDirectory);
-        return "Directory size: " + totalSize + " bytes";
+        return "Tamanho do diretorio: " + totalSize + " bytes";
     }
 
     // Operações Avançadas:
 
-    // ✅ cp: Copia arquivos ou diretórios
+    // cp: Copia arquivos ou diretórios
     private String cp(String source, String destination) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(source);
         Optional<File> file = currentDirectory.findFile(source);
@@ -536,12 +580,12 @@ public class TerminalService {
         if (dir.isPresent()) {
             // Verificar se o destino já contém um diretório com o mesmo nome
             if (currentDirectory.findSubdirectory(destination).isPresent()) {
-                return "cp: cannot copy '" + source + "': destination already exists";
+                return "cp: Não foi possível copiar '" + source + "': diretório de destino já existe";
             }
 
             // Impedir a cópia do diretório dentro dele mesmo
             if (source.equals(destination)) {
-                return "cp: cannot copy a directory into itself";
+                return "cp: Não foi possível copiar '" + source + "': destino é o mesmo que a origem";
             }
 
             Directory originalDir = dir.get();
@@ -555,30 +599,46 @@ public class TerminalService {
             currentDirectory.addDirectory(newDir);
             return "";
         }
-        return "cp: cannot copy '" + source + "': No such file or directory";
+        return "cp: Não foi possivel '" + source + "': arquivo ou diretorio não encontrado";
     }
 
-    // ✅ mv: Mover arquivos ou diretórios
+    // mv: Mover arquivos ou diretórios
     private String mv(String source, String destination) {
-        Optional<Directory> dir = currentDirectory.findSubdirectory(source);
-        Optional<File> file = currentDirectory.findFile(source);
+        Optional<Directory> sourceDir = currentDirectory.findSubdirectory(source);
+        Optional<File> sourceFile = currentDirectory.findFile(source);
+        Optional<Directory> destinationDir = currentDirectory.findSubdirectory(destination);
 
-        if (dir.isPresent()) {
-            Directory targetDir = dir.get();
-            targetDir.setName(destination);
-            currentDirectory.getSubdirectories().remove(targetDir);
-            currentDirectory.addDirectory(targetDir);
+        // Se o destino for um diretório existente, mover source para dentro dele
+        if (destinationDir.isPresent()) {
+            Directory targetDir = destinationDir.get();
+
+            if (sourceDir.isPresent()) {
+                targetDir.addDirectory(sourceDir.get());
+                currentDirectory.getSubdirectories().remove(sourceDir.get());
+                return "";
+            }
+            if (sourceFile.isPresent()) {
+                targetDir.addFile(sourceFile.get());
+                currentDirectory.getFiles().remove(sourceFile.get());
+                return "";
+            }
+            return "mv: erro ao mover '" + source + "': arquivo ou diretório não encontrado";
+        }
+
+        // Se o destino não for um diretório, renomeia normalmente
+        if (sourceDir.isPresent()) {
+            sourceDir.get().setName(destination);
             return "";
         }
-        if (file.isPresent()) {
-            File targetFile = file.get();
-            targetFile.setName(destination);
+        if (sourceFile.isPresent()) {
+            sourceFile.get().setName(destination);
             return "";
         }
-        return "mv: cannot move '" + source + "': No such file or directory";
+
+        return "mv: erro ao mover '" + source + "': arquivo ou diretório não encontrado";
     }
 
-    // ✅ diff: Compara arquivos
+    // diff: Compara arquivos
     private String diff(String file1, String file2) {
         Optional<File> f1 = currentDirectory.findFile(file1);
         Optional<File> f2 = currentDirectory.findFile(file2);
@@ -598,12 +658,12 @@ public class TerminalService {
                     result.append("< " + line1 + "\n> " + line2 + "\n");
                 }
             }
-            return result.toString().isEmpty() ? "No differences found." : result.toString();
+            return result.toString().isEmpty() ? "Nenhuma diferença encontrada" : result.toString();
         }
-        return "diff: One or both files do not exist";
+        return "diff: Não foi possivel comparar '" + file1 + "' e '" + file2 + "': arquivo não encontrado";
     }
 
-    // ✅ zip: Recebe um nome de arquivo ZIP e uma lista de arquivos para compactar
+    // zip: Recebe um nome de arquivo ZIP e uma lista de arquivos para compactar
     private String zip(String[] args) {
         System.out.println("DEBUG: Comando ZIP chamado com argumentos: " + Arrays.toString(args));
 
@@ -617,7 +677,7 @@ public class TerminalService {
 
         // Criar um novo diretório para simular o ZIP
         Directory zipDirectory = new Directory(zipName, currentDirectory);
-        System.out.println("DEBUG: Criando diretório '" + zipName + "' para simular ZIP");
+        System.out.println("DEBUG: Criando diretório '" + zipName + "' para armazenar arquivos compactados");
 
         boolean hasValidFiles = false;
         List<String> arquivosParaCompactar = new ArrayList<>();
@@ -662,7 +722,7 @@ public class TerminalService {
         return "Arquivos compactados em '" + zipName + "'";
     }
 
-    // ✅ unzip: Extrair arquivos de um ZIP
+    // unzip: Extrair arquivos de um ZIP
     private String unzip(String zipName) {
         if (!zipName.endsWith(".zip")) {
             zipName += ".zip";
@@ -693,12 +753,12 @@ public class TerminalService {
 
     // Extras:
 
-    // ✅ history: Exibir histórico de comandos
+    // history: Exibir histórico de comandos
     private String history() {
         return String.join("\n", commandHistory);
     }
 
-    // ✅ exit: Encerrar a sessão do terminal e resetar os dados
+    // exit: Encerrar a sessão do terminal e resetar os dados
     private void resetTerminal() {
         System.out.println("DEBUG: Resetando terminal...");
 
@@ -716,7 +776,7 @@ public class TerminalService {
     }
 
     // Métodos Auxiliares:
-    // ✅ calculateDirectorySize: Calcular o tamanho de um diretório
+    // calculateDirectorySize: Calcular o tamanho de um diretório
     private int calculateDirectorySize(Directory dir) {
         int size = 0;
 
@@ -736,7 +796,7 @@ public class TerminalService {
         return size;
     }
 
-    // ✅ getHelpMessage: Obter mensagem de ajuda
+    // getHelpMessage: Obter mensagem de ajuda
     private String getHelpMessage() {
         return "Comandos disponíveis:\n"
                 + "  - pwd: Exibe o caminho atual do diretório\n"
