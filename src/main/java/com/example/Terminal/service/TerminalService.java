@@ -272,15 +272,29 @@ public class TerminalService {
         Optional<File> file = currentDirectory.findFile(name);
         if (file.isPresent()) {
             currentDirectory.getFiles().remove(file.get());
-            return "";
+            return "rm: Arquivo '" + name + "' removido.";
         }
+    
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
         if (dir.isPresent()) {
+            deleteDirectoryRecursively(dir.get());
             currentDirectory.getSubdirectories().remove(dir.get());
-            return "";
+            return "rm: Diretório '" + name + "' e seu conteúdo foram removidos.";
         }
-        return "rm: Não foi possível remover '" + name + "': arquivo ou diretório não encontrado";
+    
+        return "rm: Não foi possível remover '" + name + "': arquivo ou diretório não encontrado.";
     }
+    private void deleteDirectoryRecursively(Directory dir) {
+        for (File file : new ArrayList<>(dir.getFiles())) {
+            dir.getFiles().remove(file);
+        }
+    
+        for (Directory subDir : new ArrayList<>(dir.getSubdirectories())) {
+            deleteDirectoryRecursively(subDir);
+            dir.getSubdirectories().remove(subDir);
+        }
+    }
+    
 
     // head: Exibir as primeiras N linhas de um arquivo
     private String head(String fileName, int n) {
@@ -320,14 +334,16 @@ public class TerminalService {
     private String wc(String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
         return file.map(f -> {
-            String content = f.getContent();
+            String content = f.getContent().replaceAll("^\"|\"$", ""); // Remove aspas no início e no final
+    
             long lines = content.lines().count();
-            long words = Arrays.stream(content.split("\\s+")).count();
+            long words = Arrays.stream(content.split("\\s+")).filter(w -> !w.isEmpty()).count();
             long chars = content.length();
+    
             return lines + " " + words + " " + chars + " " + fileName;
         }).orElse("wc: " + fileName + ": arquivo ou diretorio não encontrado");
     }
-
+    
     // Navegação entre Diretórios:
 
     // cd: Navegar entre diretórios
