@@ -658,26 +658,30 @@ public class TerminalService {
     private String diff(String file1, String file2) {
         Optional<File> f1 = currentDirectory.findFile(file1);
         Optional<File> f2 = currentDirectory.findFile(file2);
-
+    
         if (f1.isPresent() && f2.isPresent()) {
             List<String> lines1 = Arrays.asList(f1.get().getContent().split("\n"));
             List<String> lines2 = Arrays.asList(f2.get().getContent().split("\n"));
-
+    
             StringBuilder result = new StringBuilder();
             int maxLines = Math.max(lines1.size(), lines2.size());
-
+    
             for (int i = 0; i < maxLines; i++) {
-                String line1 = (i < lines1.size()) ? lines1.get(i) : "";
-                String line2 = (i < lines2.size()) ? lines2.get(i) : "";
-
+                // Remove aspas do final de cada linha antes da comparação
+                String line1 = (i < lines1.size()) ? lines1.get(i).replaceAll("\"$", "") : "";
+                String line2 = (i < lines2.size()) ? lines2.get(i).replaceAll("\"$", "") : "";
+    
                 if (!line1.equals(line2)) {
                     result.append("< " + line1 + "\n> " + line2 + "\n");
                 }
             }
-            return result.toString().isEmpty() ? "Nenhuma diferença encontrada" : result.toString();
+            
+            return result.toString().isEmpty() ? "Nenhuma diferença encontrada" : result.toString().trim();
         }
-        return "diff: Não foi possivel comparar '" + file1 + "' e '" + file2 + "': arquivo não encontrado";
+        
+        return "diff: Não foi possível comparar '" + file1 + "' e '" + file2 + "': arquivo não encontrado";
     }
+    
 
     // zip: Recebe um nome de arquivo ZIP e uma lista de arquivos para compactar
     private String zip(String[] args) {
