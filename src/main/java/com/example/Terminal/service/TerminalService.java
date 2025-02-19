@@ -204,12 +204,38 @@ public class TerminalService {
 
     // touch: Criar arquivos vazios
     private String touch(String name) {
+        // Verifica se o nome inclui um caminho (ex: "docs/relatorio.txt")
+        if (name.contains("/")) {
+            String[] parts = name.split("/");
+            String fileName = parts[parts.length - 1]; // Nome do arquivo
+            Directory targetDirectory = currentDirectory;
+    
+            // Navega pelos diretórios até o último
+            for (int i = 0; i < parts.length - 1; i++) {
+                Optional<Directory> subdir = targetDirectory.findSubdirectory(parts[i]);
+                if (subdir.isPresent()) {
+                    targetDirectory = subdir.get(); // Continua navegando
+                } else {
+                    return "touch: não foi possível criar o arquivo '" + name + "': Diretório não encontrado";
+                }
+            }
+    
+            // Cria o arquivo no diretório final
+            if (targetDirectory.findFile(fileName).isPresent()) {
+                return ""; // Arquivo já existe
+            }
+            targetDirectory.addFile(new File(fileName));
+            return "";
+        }
+    
+        // Caso contrário, cria o arquivo no diretório atual
         if (currentDirectory.findFile(name).isPresent()) {
             return ""; // Arquivo já existe
         }
         currentDirectory.addFile(new File(name));
         return "";
     }
+    
 
     // echo: Adicionar ou sobrescrever texto em arquivos
     private String echo(String command) {
