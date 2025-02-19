@@ -516,62 +516,66 @@ public class TerminalService {
     private String chown(String owner, String name) {
         Optional<File> file = currentDirectory.findFile(name);
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
-
-        if (file.isPresent() || dir.isPresent()) {
-            return ""; // Simula sucesso
+    
+        if (file.isPresent()) {
+            permissions.put(name + "_owner", owner);  // Armazena o proprietário do arquivo
+            return "chown: Proprietário de '" + name + "' alterado para '" + owner + "'";
         }
+    
+        if (dir.isPresent()) {
+            permissions.put(name + "_owner", owner);  // Armazena o proprietário do diretório
+            return "chown: Proprietário de '" + name + "' alterado para '" + owner + "'";
+        }
+    
         return "chown: Acesso não permitido '" + name + "': arquivo ou diretorio não encontrado";
     }
+    
 
     // ls -l: Listar conteúdo do diretório com detalhes
     private String ls(boolean isDetailed) {
         StringBuilder output = new StringBuilder();
-
         DateTimeFormatter dateFormat = DateTimeFormatter.ofPattern("MMM dd HH:mm");
-
+    
         List<Directory> dirs = currentDirectory.getSubdirectories().stream()
                 .sorted(Comparator.comparing(Directory::getName))
                 .toList();
-
+    
         List<File> files = currentDirectory.getFiles().stream()
                 .sorted(Comparator.comparing(File::getName))
                 .toList();
-
+    
         if (isDetailed) {
-
             for (Directory dir : dirs) {
                 String formattedDate = LocalDateTime.now().format(dateFormat);
-                output.append(String.format("drwxr-xr-x  user  root  4096  %s  %s/\n", formattedDate, dir.getName()));
+                String owner = permissions.getOrDefault(dir.getName() + "_owner", "user");  // Busca o proprietário
+                output.append(String.format("drwxr-xr-x  %-5s  root  4096  %s  %s/\n", owner, formattedDate, dir.getName()));
             }
             for (File file : files) {
                 String permission = permissions.getOrDefault(file.getName(), "-rw-r--r--");
+                String owner = permissions.getOrDefault(file.getName() + "_owner", "user");  // Busca o proprietário
                 int size = file.getContent().length();
                 String formattedDate = LocalDateTime.now().format(dateFormat);
-                output.append(String.format("%s  user  root  %4d  %s  %s\n", permission, size, formattedDate,
-                        file.getName()));
+                output.append(String.format("%s  %-5s  root  %4d  %s  %s\n", permission, owner, size, formattedDate, file.getName()));
             }
         } else {
-
             List<String> items = new ArrayList<>();
-            for (Directory dir : dirs)
-                items.add(dir.getName() + "/");
-            for (File file : files)
-                items.add(file.getName());
-
+            for (Directory dir : dirs) items.add(dir.getName() + "/");
+            for (File file : files) items.add(file.getName());
+    
             int colWidth = 15; // Largura da coluna
-            int numCols = 4; // Número de colunas exibidas antes da quebra de linha
+            int numCols = 4;   // Número de colunas antes da quebra de linha
             int index = 0;
-
+    
             for (String item : items) {
                 output.append(String.format("%-" + colWidth + "s", item));
                 index++;
-                if (index % numCols == 0)
-                    output.append("\n"); // Quebra de linha a cada 4 itens
+                if (index % numCols == 0) output.append("\n");
             }
         }
-
+    
         return output.toString().trim();
     }
+    
 
     // Informações sobre Arquivos e Diretórios:
 
@@ -649,37 +653,52 @@ public class TerminalService {
     private String mv(String source, String destination) {
         Optional<Directory> sourceDir = currentDirectory.findSubdirectory(source);
         Optional<File> sourceFile = currentDirectory.findFile(source);
-        Optional<Directory> destinationDir = currentDirectory.findSubdirectory(destination);
-
-        // Se o destino for um diretório existente, mover source para dentro dele
-        if (destinationDir.isPresent()) {
-            Directory targetDir = destinationDir.get();
-
-            if (sourceDir.isPresent()) {
-                targetDir.addDirectory(sourceDir.get());
-                currentDirectory.getSubdirectories().remove(sourceDir.get());
-                return "";
-            }
-            if (sourceFile.isPresent()) {
-                targetDir.addFile(sourceFile.get());
-                currentDirectory.getFiles().remove(sourceFile.get());
-                return "";
-            }
-            return "mv: erro ao mover '" + source + "': arquivo ou diretório não encontrado";
+    
+        // Encontrar o diretório de destino
+        Directory targetDir = findDirectoryByPath(destination);
+        if (targetDir == null) {
+            return "mv: diretório de destino não encontrado: '" + destination + "'";
         }
-
-        // Se o destino não for um diretório, renomeia normalmente
+    
+        // Mover diretório
         if (sourceDir.isPresent()) {
-            sourceDir.get().setName(destination);
-            return "";
+            targetDir.addDirectory(sourceDir.get());
+            currentDirectory.getSubdirectories().remove(sourceDir.get());
+            return "mv: Diretório '" + source + "' movido para '" + destination + "'";
         }
+    
+        // Mover arquivo
         if (sourceFile.isPresent()) {
-            sourceFile.get().setName(destination);
-            return "";
+            targetDir.addFile(sourceFile.get());
+            currentDirectory.getFiles().remove(sourceFile.get());
+            return "mv: Arquivo '" + source + "' movido para '" + destination + "'";
         }
-
-        return "mv: erro ao mover '" + source + "': arquivo ou diretório não encontrado";
+    
+        return "mv: arquivo ou diretório não encontrado: '" + source + "'";
     }
+    
+    private Directory findDirectoryByPath(String path) {
+        String[] parts = path.split("/");
+        Directory current = path.startsWith("/") ? root : currentDirectory; // Se começar com "/", começa na raiz
+    
+        for (String part : parts) {
+            if (part.isEmpty() || part.equals(".")) continue; // Ignora "." ou vazio
+            if (part.equals("..")) {
+                // Volta para o diretório pai
+                if (current.getParent() != null) {
+                    current = current.getParent();
+                } else {
+                    return null; // Não pode voltar além da raiz
+                }
+            } else {
+                Optional<Directory> subdir = current.findSubdirectory(part);
+                if (subdir.isEmpty()) return null; // Diretório não encontrado
+                current = subdir.get();
+            }
+        }
+        return current;
+    }
+    
 
     // diff: Compara arquivos
     private String diff(String file1, String file2) {
