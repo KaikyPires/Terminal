@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         "pwd", "mkdir", "rmdir", "tree", "rename", "touch", "cat",
         "rm", "ls", "cd", "find", "grep", "chmod", "chown", "stat",
         "du", "cp", "mv", "diff", "zip", "unzip", "history", "tail",
-        "wc", "head", "help", "exit", "echo"
+        "wc", "head", "help", "exit", "echo","arquivo.txt","Hello World", "pasta","teste"
     ];
     let commandHistory = [];  // Histórico de comandos
     let historyIndex = -1;  // Índice do histórico

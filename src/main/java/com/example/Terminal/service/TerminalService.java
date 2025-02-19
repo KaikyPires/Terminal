@@ -130,20 +130,28 @@ public class TerminalService {
     private String mkdir(String path) {
         String[] parts = path.split("/");
         Directory parent = currentDirectory;
-
-        for (String part : parts) {
+    
+        for (int i = 0; i < parts.length; i++) {
+            String part = parts[i];
             Optional<Directory> existingDir = parent.findSubdirectory(part);
+    
             if (existingDir.isPresent()) {
                 parent = existingDir.get(); // Avança para o subdiretório existente
             } else {
+                // Se não é o último diretório da cadeia, não pode criar
+                if (i < parts.length - 1) {
+                    return "mkdir: não foi possível criar o diretório '" + path + "': Diretório intermediário não encontrado";
+                }
+    
+                // Cria apenas o último diretório, se todos os anteriores existirem
                 Directory newDir = new Directory(part, parent);
                 parent.addDirectory(newDir);
-                parent = newDir; // Continua para o próximo nível
+                return "mkdir: Diretório '" + path + "' criado com sucesso";
             }
         }
-        return "";
+        return "mkdir: O diretório já existe";
     }
-
+    
     // rmdir: Remover diretórios vazios
     private String rmdir(String name) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
@@ -359,7 +367,8 @@ public class TerminalService {
     private String wc(String fileName) {
         Optional<File> file = currentDirectory.findFile(fileName);
         return file.map(f -> {
-            String content = f.getContent().replaceAll("^\"|\"$", ""); // Remove aspas no início e no final
+            // Remove todas as aspas do conteúdo antes da contagem
+            String content = f.getContent().replaceAll("\"", "");
     
             long lines = content.lines().count();
             long words = Arrays.stream(content.split("\\s+")).filter(w -> !w.isEmpty()).count();
@@ -368,6 +377,7 @@ public class TerminalService {
             return lines + " " + words + " " + chars + " " + fileName;
         }).orElse("wc: " + fileName + ": arquivo ou diretorio não encontrado");
     }
+    
     
     // Navegação entre Diretórios:
 
@@ -583,33 +593,53 @@ public class TerminalService {
     private String stat(String name) {
         Optional<File> file = currentDirectory.findFile(name);
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
-
+    
         if (file.isPresent()) {
-            return "File: " + name + "\nSize: " + file.get().getContent().length() + " bytes";
+            // Remove todas as aspas antes de calcular o tamanho
+            String contentWithoutQuotes = file.get().getContent().replaceAll("\"", "");
+            return "File: " + name + "\nSize: " + contentWithoutQuotes.length() + " bytes";
         }
         if (dir.isPresent()) {
             return "Directory: " + name + "\nSubdirectories: " + dir.get().getSubdirectories().size();
         }
         return "stat: Não foi possível acessar '" + name + "': arquivo ou diretorio não encontrado";
     }
+    
 
     // du: Exibe o tamanho do diretório
     private String du(String name) {
         Directory targetDirectory;
-
+    
         if (name.equals(".")) {
-            targetDirectory = currentDirectory; // Se for ".", usar o diretório atual
+            targetDirectory = currentDirectory; // Se for ".", usa o diretório atual
         } else {
             Optional<Directory> dir = currentDirectory.findSubdirectory(name);
             if (dir.isEmpty()) {
-                return "du: Acesso não permitido '" + name + "': arquivo ou diretorio não encontrado";
+                return "du: Acesso não permitido '" + name + "': arquivo ou diretório não encontrado";
             }
             targetDirectory = dir.get();
         }
-
-        int totalSize = calculateDirectorySize(targetDirectory);
-        return "Tamanho do diretorio: " + totalSize + " bytes";
+    
+        int totalSize = calculateDirectoryDU(targetDirectory);
+        return "Tamanho do diretório: " + totalSize + " bytes";
     }
+    
+    private int calculateDirectoryDU(Directory dir) {
+        int size = 0;
+    
+        for (File file : dir.getFiles()) {
+            // Remove as aspas antes de contar o tamanho
+            String contentWithoutQuotes = file.getContent().replaceAll("^\"|\"$", "");
+            size += contentWithoutQuotes.length();
+        }
+    
+        for (Directory subdir : dir.getSubdirectories()) {
+            size += calculateDirectorySize(subdir);
+        }
+    
+        return size;
+    }
+    
 
     // Operações Avançadas:
 
