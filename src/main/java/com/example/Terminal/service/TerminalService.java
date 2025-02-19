@@ -79,11 +79,9 @@ public class TerminalService {
             case "find":
                 if (parts.length < 4 || !parts[2].equals("-name")) {
                     System.out.println(parts[2]);
-                    return "find: invalid syntax. Uso correto: find <diretorio> -name <arquivo>";
-                    
+                    return "find: invalid syntax. Uso correto: find <diretorio> -name <arquivo>";   
                 }
                 return find(parts[1], parts[3]);
-
             case "grep":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? grep(arg1, arg2) : "grep: missing operands";
 
@@ -118,11 +116,9 @@ public class TerminalService {
                 return history();
             case "help":
                 return getHelpMessage();
-
             case "exit":
                 resetTerminal();
                 return "exit: Terminal encerrado. Inicie uma nova sessão.";
-
             default:
                 return "zsh: command not found: " + command;
         }
