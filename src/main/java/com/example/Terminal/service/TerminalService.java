@@ -34,10 +34,11 @@ public class TerminalService {
             return echo(command.substring(5));
         }
 
-        String[] parts = command.split(" ", 3);
+        String[] parts = command.split(" ", 4);
         String cmd = parts[0];
         String arg1 = (parts.length > 1) ? parts[1] : "";
         String arg2 = (parts.length > 2) ? parts[2] : "";
+
 
         switch (cmd) {
             // Criação e Manipulação de Diretórios
@@ -76,10 +77,12 @@ public class TerminalService {
 
             // Busca e Filtragem
             case "find":
-                if (parts.length < 3 || !parts[1].equals("-name")) {
+                if (parts.length < 4 || !parts[2].equals("-name")) {
+                    System.out.println(parts[2]);
                     return "find: invalid syntax. Uso correto: find <diretorio> -name <arquivo>";
+                    
                 }
-                return find(parts[0], parts[2]);
+                return find(parts[1], parts[3]);
 
             case "grep":
                 return (!arg1.isEmpty() && !arg2.isEmpty()) ? grep(arg1, arg2) : "grep: missing operands";
@@ -387,7 +390,7 @@ public class TerminalService {
         fileName = fileName.replaceAll("^\"|\"$", ""); // Remove aspas extras
 
         Directory searchDirectory;
-
+        System.out.println("DEBUG: Este e o " +directoryName+ " e este e o " +fileName);
         // Se for ".", busca no diretório atual; se for "~", busca na raiz
         if (directoryName.equals("~") || directoryName.equals(".")) {
             searchDirectory = root;
@@ -404,6 +407,8 @@ public class TerminalService {
 
         List<String> results = new ArrayList<>();
         searchRecursively(searchDirectory, fileName, results, searchDirectory.getName());
+
+        System.out.println(results);
 
         return results.isEmpty() ? "find: Nenhum arquivo correspondente encontrado" : String.join("\n", results);
     }

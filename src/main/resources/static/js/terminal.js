@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     ];
     let commandHistory = [];  // Histórico de comandos
     let historyIndex = -1;  // Índice do histórico
-    // 🔥 Criar o primeiro prompt assim que a página carregar
+    // Criar o primeiro prompt assim que a página carregar
     createNewPrompt();
 
     function focusInput() {
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             const output = await response.text();
             addToHistory(command, output);
     
-            // 🔥 Agora espera a atualização do caminho antes de criar o próximo prompt
+            // Agora espera a atualização do caminho antes de criar o próximo prompt
             await updatePrompt();
             await createNewPrompt();
         } catch (error) {
@@ -95,7 +95,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const commandContainer = document.createElement("div");
         commandContainer.classList.add("history-entry");
 
-        // 🔥 Usa o último prompt conhecido ANTES do comando ser executado
+        // Usa o último prompt conhecido ANTES do comando ser executado
         const userPrompt = document.createElement("div");
         userPrompt.classList.add("command-line");
         userPrompt.innerHTML = `<span class="prompt">${currentPrompt}</span> ${command}`;
@@ -111,14 +111,14 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         terminalHistory.appendChild(commandContainer);
 
-        // 🔥 Criar nova linha de entrada sem duplicação
+        // Criar nova linha de entrada sem duplicação
         createNewPrompt();
 
         commandContainer.scrollIntoView({ behavior: "smooth" });
     }
 
     async function createNewPrompt() {
-        // 🔥 Remover qualquer input antigo antes de criar um novo
+        // Remover qualquer input antigo antes de criar um novo
         const existingInput = document.querySelector(".cmd-input");
         if (existingInput) {
             existingInput.parentElement.remove();
@@ -127,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async function () {
         const inputContainer = document.createElement("div");
         inputContainer.classList.add("input-line");
 
-        // 🔥 Usa o último prompt conhecido
+        // Usa o último prompt conhecido
         inputContainer.innerHTML = `
             <span class="prompt">${currentPrompt}</span>
             <input type="text" class="cmd-input" autofocus>
@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         terminalHistory.appendChild(inputContainer);
 
-        // 🔥 Focar no novo input
+        // Focar no novo input
         setTimeout(() => {
             document.querySelector(".cmd-input").focus();
         }, 10);
