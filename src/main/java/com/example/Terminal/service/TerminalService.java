@@ -816,7 +816,6 @@ public class TerminalService {
         System.out.println("DEBUG: Tamanho total do diretório '" + dir.getName() + "': " + size + " bytes");
         return size;
     }
-
     // getHelpMessage: Obter mensagem de ajuda
     private String getHelpMessage() {
         return "Comandos disponíveis:\n"
