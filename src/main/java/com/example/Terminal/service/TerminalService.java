@@ -382,27 +382,15 @@ public class TerminalService {
     // Navegação entre Diretórios:
 
     // cd: Navegar entre diretórios
-    private String cd(String name) {
-        if (name.equals("/")) {
-            currentDirectory = root; // Volta para o diretório raiz (~)
+    private String cd(String path) {
+        Directory targetDirectory = findDirectoryByPath(path);
+        if (targetDirectory != null) {
+            currentDirectory = targetDirectory;
             return "";
         }
-
-        if (name.equals("..")) {
-            if (currentDirectory.getParent() != null) {
-                currentDirectory = currentDirectory.getParent();
-            }
-            return ""; // Navega para o diretório pai
-        }
-
-        Optional<Directory> newDir = currentDirectory.findSubdirectory(name);
-        if (newDir.isPresent()) {
-            currentDirectory = newDir.get();
-            return "";
-        }
-
-        return "cd\": arquivo ou diretorio não encontrado " + name;
+        return "cd: arquivo ou diretório não encontrado: '" + path + "'";
     }
+    
 
     // pwd: Exibir o caminho atual do diretório
     public String getCurrentPath() {
@@ -522,7 +510,7 @@ public class TerminalService {
         return "-rw-r--r--";
     }
 
-    // ✅ chown: Alterar proprietário (simulado)
+    // chown: Alterar proprietário
     private String chown(String owner, String name) {
         Optional<File> file = currentDirectory.findFile(name);
         Optional<Directory> dir = currentDirectory.findSubdirectory(name);
@@ -647,57 +635,58 @@ public class TerminalService {
     private String cp(String source, String destination) {
         Optional<Directory> dir = currentDirectory.findSubdirectory(source);
         Optional<File> file = currentDirectory.findFile(source);
-
-        if (file.isPresent()) {
-            File newFile = new File(destination);
-            newFile.setContent(file.get().getContent());
-            currentDirectory.addFile(newFile);
-            return "";
+    
+        Directory targetDir = findDirectoryByPath(destination);
+        if (targetDir == null) {
+            return "cp: diretório de destino não encontrado: '" + destination + "'";
         }
+    
+        if (file.isPresent()) {
+            File newFile = new File(file.get().getName());
+            newFile.setContent(file.get().getContent());
+            targetDir.addFile(newFile);
+            return "cp: Arquivo '" + source + "' copiado para '" + destination + "'";
+        }
+    
         if (dir.isPresent()) {
-            // Verificar se o destino já contém um diretório com o mesmo nome
-            if (currentDirectory.findSubdirectory(destination).isPresent()) {
-                return "cp: Não foi possível copiar '" + source + "': diretório de destino já existe";
-            }
-
-            // Impedir a cópia do diretório dentro dele mesmo
             if (source.equals(destination)) {
                 return "cp: Não foi possível copiar '" + source + "': destino é o mesmo que a origem";
             }
-
+    
             Directory originalDir = dir.get();
-            Directory newDir = new Directory(destination, currentDirectory);
+            Directory newDir = new Directory(originalDir.getName(), targetDir);
             for (File f : originalDir.getFiles()) {
-                newDir.addFile(new File(f.getName()));
+                File newFile = new File(f.getName());
+                newFile.setContent(f.getContent());
+                newDir.addFile(newFile);
             }
             for (Directory d : originalDir.getSubdirectories()) {
                 newDir.addDirectory(new Directory(d.getName(), newDir));
             }
-            currentDirectory.addDirectory(newDir);
-            return "";
+            targetDir.addDirectory(newDir);
+            return "cp: Diretório '" + source + "' copiado para '" + destination + "'";
         }
-        return "cp: Não foi possivel '" + source + "': arquivo ou diretorio não encontrado";
+    
+        return "cp: arquivo ou diretório não encontrado: '" + source + "'";
     }
+    
 
     // mv: Mover arquivos ou diretórios
     private String mv(String source, String destination) {
         Optional<Directory> sourceDir = currentDirectory.findSubdirectory(source);
         Optional<File> sourceFile = currentDirectory.findFile(source);
     
-        // Encontrar o diretório de destino
         Directory targetDir = findDirectoryByPath(destination);
         if (targetDir == null) {
             return "mv: diretório de destino não encontrado: '" + destination + "'";
         }
     
-        // Mover diretório
         if (sourceDir.isPresent()) {
             targetDir.addDirectory(sourceDir.get());
             currentDirectory.getSubdirectories().remove(sourceDir.get());
             return "mv: Diretório '" + source + "' movido para '" + destination + "'";
         }
     
-        // Mover arquivo
         if (sourceFile.isPresent()) {
             targetDir.addFile(sourceFile.get());
             currentDirectory.getFiles().remove(sourceFile.get());
@@ -707,27 +696,35 @@ public class TerminalService {
         return "mv: arquivo ou diretório não encontrado: '" + source + "'";
     }
     
-    private Directory findDirectoryByPath(String path) {
-        String[] parts = path.split("/");
-        Directory current = path.startsWith("/") ? root : currentDirectory; // Se começar com "/", começa na raiz
     
+    private Directory findDirectoryByPath(String path) {
+        // Se o caminho começar com "~", começa a partir do diretório root (que simula o home)
+        Directory current = path.startsWith("~") ? root : (path.startsWith("/") ? root : currentDirectory);
+    
+        // Remove o "~" ou "/" do início, caso existam
+        if (path.startsWith("~") || path.startsWith("/")) {
+            path = path.substring(1);
+        }
+    
+        String[] parts = path.split("/");
         for (String part : parts) {
-            if (part.isEmpty() || part.equals(".")) continue; // Ignora "." ou vazio
+            if (part.isEmpty() || part.equals(".")) continue;
             if (part.equals("..")) {
-                // Volta para o diretório pai
                 if (current.getParent() != null) {
                     current = current.getParent();
                 } else {
-                    return null; // Não pode voltar além da raiz
+                    return null;
                 }
             } else {
                 Optional<Directory> subdir = current.findSubdirectory(part);
-                if (subdir.isEmpty()) return null; // Diretório não encontrado
+                if (subdir.isEmpty()) return null;
                 current = subdir.get();
             }
         }
         return current;
     }
+
+    
     
 
     // diff: Compara arquivos
