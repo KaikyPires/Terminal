@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <link rel="icon" href="../src/main/resources/static/images/Windows_Terminal_Logo.png">
+    <link rel="icon" href="./src/main/resources/static/images/Windows_Terminal_Logo.png">
     <link rel="icon" href="data:,">
 
     <title>Terminal Simulador</title>
@@ -12,8 +12,6 @@
         body {
     background: #6D7074;
   }
-
-
 
   .terminal-window {
     text-align: left;
@@ -32,7 +30,7 @@
   }
 
   .prompt {
-    flex-shrink: 0; /* 🔥 Garante que o prompt não encolha nem quebre de linha */
+    flex-shrink: 0; 
   }
 
   .cmd-input {
@@ -41,18 +39,18 @@
     color: white;
     font-size: 14px;
     font-family: Menlo, Monaco, "Consolas", "Courier New", "Courier";
-    width: auto; /* 🔥 Deixa o input ocupar apenas o necessário */
+    width: auto; 
     outline: none;
     caret-color: white;
-    flex-grow: 1; /* 🔥 Faz o input expandir sem quebrar a linha */
-    min-width: 1px; /* 🔥 Evita que o input quebre quando vazio */
+    flex-grow: 1; 
+    min-width: 1px;
 }
 
 .input-line {
   display: flex;
   align-items: center;
-  gap: 5px; /* Mantém o espaço pequeno entre prompt e input */
-  white-space: nowrap; /* 🔥 Impede quebra de linha automática */
+  gap: 5px; 
+  white-space: nowrap; 
   }
 
 .terminal {
@@ -150,6 +148,6 @@
         
         
     </div>  
-    <script src="../src/main/resources/static/js/terminal_js.js" defer></script>  <!--fazer a mudança ao interligar com java-->
+    <script src="./src/main/resources/static/js/terminal_js.js" defer></script>  <!--fazer a mudança ao interligar com java-->
 </body>
 </html>
